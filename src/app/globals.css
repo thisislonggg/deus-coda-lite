@@ -172,3 +172,6 @@
   color: rgb(125, 211, 252);
   text-decoration: underline;
 }
+html, body {
+  background: #020617;
+} 

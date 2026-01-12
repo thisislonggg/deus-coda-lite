@@ -136,8 +136,19 @@ export default function PageView() {
     flash("Saved ✅");
   }
 
-  if (loading) return <div className="text-white/60 p-6">Loading...</div>;
-  if (!page) return <div className="text-white/60 p-6">Page tidak ditemukan.</div>;
+if (loading)
+  return (
+    <div className="min-h-screen bg-slate-950 text-white p-6">
+      <div className="text-white/60">Loading...</div>
+    </div>
+  );
+
+if (!page)
+  return (
+    <div className="min-h-screen bg-slate-950 text-white p-6">
+      <div className="text-white/60">Page tidak ditemukan.</div>
+    </div>
+  );
 
   const isFolder = page.type === "folder";
 
