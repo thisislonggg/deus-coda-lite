@@ -498,19 +498,12 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
       >
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex items-center gap-2">
-            {/* ✅ Logo (taruh file di /public/Logo-Deus.webp) */}
-            <div className="h-7 w-7 rounded-md overflow-hidden border border-white/10 bg-black/30 grid place-items-center">
-              <Image src="/Logo-Deus.webp" alt="Deus Code" width={28} height={28} priority />
-            </div>
-
-            <div className="min-w-0">
-              <div className="text-sm font-semibold tracking-tight truncate">Deus Code</div>
-              <div className="text-xs text-white/70 truncate">SOP & Admin Docs</div>
+            <div className="flex items-center gap-3">
+              <Image src="/Logo-Deus.webp" alt="Deus Code" width={88} height={88} priority />
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* ✅ viewer: hilang Add */}
             {canEdit(role) && (
               <AddMenu
                 onCreate={(kind) => {
@@ -1033,6 +1026,13 @@ function TreeList({
           <div key={n.id}>
             <div
               onContextMenu={(e) => onContextMenuNode(e, n)}
+              onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest("button[data-action]")) return;
+
+                    if (isFolder) onToggle(n.id);
+                    else onNavigate(n.slug);
+                  }}
               className={[
                 "group flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition border select-none",
                 isActive ? "text-white border-white/10" : "text-white/85 border-transparent hover:bg-white/10",
@@ -1059,16 +1059,27 @@ function TreeList({
 
               <button
                 type="button"
-                onClick={() => (isFolder ? onToggle(n.id) : onNavigate(n.slug))}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  if (isFolder) {
+                    onToggle(n.id); // ✅ folder hanya expand/collapse
+                    return;
+                  }
+
+                  onNavigate(n.slug); // ✅ page baru navigate
+                }}
                 className="flex-1 text-left truncate"
                 title={n.title}
               >
                 {n.title}
               </button>
 
+
               <div className="opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
                 {canEdit && isFolder && (
-                  <button
+                  <button data-action="1"
                     type="button"
                     onClick={() => onAdd(n.id)}
                     className="text-xs px-2 py-1 rounded-md hover:bg-white/10"
@@ -1079,7 +1090,7 @@ function TreeList({
                   </button>
                 )}
                 {canEdit && (
-                  <button
+                  <button data-action="1"
                     type="button"
                     onClick={() => onDelete(n)}
                     className="text-xs px-2 py-1 rounded-md hover:bg-white/10 text-red-300"
