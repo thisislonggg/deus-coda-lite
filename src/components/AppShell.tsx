@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SidebarTree from "../../components/SidebarTree";
+import SidebarTree from "@/components/SidebarTree";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
-  // ESC untuk tutup drawer
+  // ✅ ESC close
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -15,7 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Kalau resize ke desktop, auto tutup drawer
+  // ✅ kalau pindah ke desktop, tutup drawer biar aman
   useEffect(() => {
     function onResize() {
       if (window.innerWidth >= 768) setOpen(false); // md breakpoint
@@ -25,8 +25,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950 text-white">
-      {/* Topbar (mobile only) */}
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* TOP BAR (mobile only) */}
       <div className="md:hidden sticky top-0 z-[60] border-b border-white/10 bg-slate-950/80 backdrop-blur">
         <div className="h-14 px-4 flex items-center justify-between">
           <button
@@ -38,22 +38,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-semibold">Menu</span>
           </button>
 
-          <div className="text-sm text-white/70 truncate max-w-[60%]">
+          <div className="text-sm text-white/70 truncate max-w-[55%]">
             Deus Coda Lite
           </div>
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-0px)] overflow-hidden">
-        {/* Sidebar (desktop only) */}
-        <div className="hidden md:block w-[320px] shrink-0 sticky top-0 h-screen">
-          <div className="h-screen overflow-hidden">
-            {/* @ts-ignore */}
-            <SidebarTree />
-          </div>
+      <div className="flex">
+        {/* DESKTOP SIDEBAR */}
+        <div className="hidden md:block">
+          <SidebarTree showDrafts />
         </div>
 
-        {/* Sidebar Drawer (mobile) */}
+        {/* MOBILE DRAWER SIDEBAR */}
         {open && (
           <>
             {/* overlay */}
@@ -63,12 +60,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             />
 
             {/* drawer */}
-            <div className="fixed inset-y-0 left-0 z-[80] w-[320px] max-w-[85vw]">
-              <div className="h-full bg-slate-950 border-r border-white/10">
-                <div className="flex items-center justify-between px-3 py-3 border-b border-white/10">
-                  <div className="text-sm font-semibold text-white/80">
-                    Navigation
-                  </div>
+            <div className="fixed z-[80] inset-y-0 left-0 w-[320px] max-w-[85vw]">
+              <div className="h-full">
+                {/* header drawer */}
+                <div className="md:hidden flex items-center justify-between px-3 py-3 border-b border-white/10 bg-slate-950">
+                  <div className="text-sm font-semibold text-white/80">Navigation</div>
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
@@ -78,18 +74,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </button>
                 </div>
 
-                <div className="h-[calc(100vh-52px)] overflow-hidden">
-                  {/* @ts-ignore */}
-                  <SidebarTree />
-                </div>
+                {/* sidebar */}
+                <SidebarTree showDrafts />
               </div>
             </div>
           </>
         )}
 
-        {/* Konten kanan yang scroll */}
-        <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-slate-950">
-          {/* padding responsif biar enak di mobile */}
+        {/* MAIN CONTENT */}
+        <main className="flex-1 min-w-0">
+          {/* ✅ padding responsive biar enak di mobile */}
           <div className="px-4 md:px-6 py-4 md:py-6">{children}</div>
         </main>
       </div>
