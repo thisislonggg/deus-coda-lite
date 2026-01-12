@@ -64,3 +64,111 @@
   .md pre { @apply font-mono text-[13px] bg-neutral-900 text-white p-3 rounded-lg overflow-auto; }
   .md hr  { @apply my-6 border-neutral-200; }
 }
+
+/* ===== TipTap Editor Headings ===== */
+.ProseMirror h1 {
+  font-size: 2.25rem; /* 36px */
+  line-height: 1.25;
+  font-weight: 700;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.75rem; /* 28px */
+  line-height: 1.3;
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror h3 {
+  font-size: 1.35rem; /* 22px */
+  line-height: 1.35;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+}
+
+/* Paragraph */
+.ProseMirror p {
+  font-size: 1rem;
+  line-height: 1.75;
+  margin: 0.5em 0;
+}
+
+/* Placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: rgba(255, 255, 255, 0.35);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* TipTap base */
+.ProseMirror {
+  outline: none;
+  min-height: 180px;
+}
+
+/* placeholder tiptap */
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: rgba(255, 255, 255, 0.35);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+/* Preview HTML styling (tanpa tailwind typography) */
+.dc-content {
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.7;
+  font-size: 16px;
+}
+
+.dc-content h1 {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 18px 0 10px;
+  color: #fff;
+}
+
+.dc-content h2 {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 16px 0 8px;
+  color: #fff;
+}
+
+.dc-content h3 {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 14px 0 6px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dc-content p {
+  margin: 10px 0;
+}
+
+.dc-content ul,
+.dc-content ol {
+  margin: 10px 0 10px 22px;
+}
+
+.dc-content li {
+  margin: 6px 0;
+}
+
+.dc-content strong {
+  color: #fff;
+}
+
+.dc-content a {
+  color: rgb(125, 211, 252);
+  text-decoration: underline;
+}

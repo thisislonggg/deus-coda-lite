@@ -87,17 +87,25 @@ function buildTree(rows: PageRow[]) {
   return { roots, map };
 }
 
-function findPathIds(map: Map<string, PageNode>, activeSlug: string | null) {
+function findPathIds(
+  map: Map<string, PageNode>,
+  activeSlug: string | null
+) {
   if (!activeSlug) return [];
+
+  // cari node aktif (page ATAU folder)
   const target = [...map.values()].find((n) => n.slug === activeSlug);
   if (!target) return [];
 
   const path: string[] = [];
   let cur: PageNode | undefined = target;
+
   while (cur) {
     path.push(cur.id);
-    cur = cur.parent_id ? map.get(cur.parent_id) : undefined;
+    if (!cur.parent_id) break;
+    cur = map.get(cur.parent_id);
   }
+
   return path;
 }
 
@@ -232,16 +240,22 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const ids = findPathIds(idMap, activeSlug);
-    if (!ids.length) return;
+useEffect(() => {
+  if (!activeSlug) return;
+  if (idMap.size === 0) return;
 
-    setExpanded((prev) => {
-      const next = { ...prev };
-      ids.forEach((id) => (next[id] = true));
-      return next;
+  const pathIds = findPathIds(idMap, activeSlug);
+  if (!pathIds.length) return;
+
+  setExpanded((prev) => {
+    const next = { ...prev };
+    pathIds.forEach((id) => {
+      next[id] = true; // expand semua parent + folder itu sendiri
     });
-  }, [activeSlug, idMap]);
+    return next;
+  });
+}, [activeSlug, idMap]);
+
 
   const filteredRoots = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -1016,7 +1030,7 @@ function TreeList({
     <div className="space-y-1">
       {nodes.map((n) => {
         const isOpen = expanded[n.id] ?? false;
-        const hasChildren = n.children?.length > 0;
+        const hasChildren = (n.children?.length ?? 0) > 0;
         const isActive = activeSlug === n.slug;
 
         const isFolder = n.type === "folder";
@@ -1027,14 +1041,16 @@ function TreeList({
             <div
               onContextMenu={(e) => onContextMenuNode(e, n)}
               onClick={(e) => {
-                    const target = e.target as HTMLElement;
-                    if (target.closest("button[data-action]")) return;
+                // Kalau klik tombol action (Add/Del) atau toggle arrow, jangan navigate
+                const target = e.target as HTMLElement;
+                if (target.closest("[data-action]")) return;
+                if (target.closest("[data-toggle]")) return;
 
-                    if (isFolder) onToggle(n.id);
-                    else onNavigate(n.slug);
-                  }}
+                // ✅ Folder & Page sama-sama bisa dibuka (navigate)
+                onNavigate(n.slug);
+              }}
               className={[
-                "group flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition border select-none",
+                "group flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition border select-none cursor-pointer",
                 isActive ? "text-white border-white/10" : "text-white/85 border-transparent hover:bg-white/10",
               ].join(" ")}
               style={{
@@ -1042,10 +1058,16 @@ function TreeList({
                 backgroundColor: isActive ? "rgba(241,196,15,0.14)" : undefined,
               }}
             >
+              {/* ✅ Tombol panah khusus untuk expand/collapse folder */}
               {isFolder ? (
                 <button
                   type="button"
-                  onClick={() => onToggle(n.id)}
+                  data-toggle="1"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggle(n.id);
+                  }}
                   className="h-5 w-5 rounded-md hover:bg-white/10 grid place-items-center"
                   title={isOpen ? "Collapse" : "Expand"}
                 >
@@ -1057,18 +1079,14 @@ function TreeList({
 
               <span className="text-white/70">{icon}</span>
 
+              {/* ✅ Judul selalu navigate (folder juga) */}
               <button
                 type="button"
+                data-action="title"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-
-                  if (isFolder) {
-                    onToggle(n.id); // ✅ folder hanya expand/collapse
-                    return;
-                  }
-
-                  onNavigate(n.slug); // ✅ page baru navigate
+                  onNavigate(n.slug);
                 }}
                 className="flex-1 text-left truncate"
                 title={n.title}
@@ -1076,12 +1094,18 @@ function TreeList({
                 {n.title}
               </button>
 
-
               <div className="opacity-0 group-hover:opacity-100 transition flex items-center gap-1">
                 {canEdit && isFolder && (
-                  <button data-action="1"
+                  <button
+                    data-action="add"
                     type="button"
-                    onClick={() => onAdd(n.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onAdd(n.id);
+                      // optional: auto expand biar kelihatan hasil tambahannya
+                      onToggle(n.id);
+                    }}
                     className="text-xs px-2 py-1 rounded-md hover:bg-white/10"
                     style={{ color: "rgb(var(--dc-primary))" }}
                     title="Add inside"
@@ -1089,10 +1113,16 @@ function TreeList({
                     + Add
                   </button>
                 )}
+
                 {canEdit && (
-                  <button data-action="1"
+                  <button
+                    data-action="delete"
                     type="button"
-                    onClick={() => onDelete(n)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onDelete(n);
+                    }}
                     className="text-xs px-2 py-1 rounded-md hover:bg-white/10 text-red-300"
                     title="Delete"
                   >
@@ -1102,6 +1132,7 @@ function TreeList({
               </div>
             </div>
 
+            {/* ✅ Child tetap tampil kalau folder expanded */}
             {isFolder && hasChildren && isOpen && (
               <div className="mt-1">
                 <TreeList
@@ -1124,6 +1155,7 @@ function TreeList({
     </div>
   );
 }
+
 
 /* ---------------- Context Menu UI ---------------- */
 
