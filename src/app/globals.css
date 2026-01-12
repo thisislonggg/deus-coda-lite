@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* ===============================
+   Brand tokens
+   =============================== */
+:root{
+  --dc-primary: 241 196 15;
+  --dc-dark: 11 15 25;
+}
+
+/* ===============================
+   Components (SAFE @apply)
+   =============================== */
+@layer components {
+  .dc-shell {
+    @apply min-h-screen bg-neutral-50 text-neutral-900;
+  }
+
+  .dc-card {
+    @apply rounded-xl border border-neutral-200 bg-white shadow-sm;
+  }
+
+  .dc-muted {
+    @apply text-neutral-500;
+  }
+
+  /* ❌ JANGAN pakai @apply ke class custom */
+  .dc-btn {
+    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition;
+  }
+
+  .dc-btn-dark {
+    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition
+           bg-neutral-900 text-white hover:bg-neutral-800;
+  }
+
+  .dc-btn-gold {
+    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition;
+    background: rgb(var(--dc-primary));
+    color: rgb(var(--dc-dark));
+  }
+
+  .dc-input {
+    @apply w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none
+           focus:ring-2 focus:ring-neutral-200;
+  }
+
+  .dc-pill {
+    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold;
+  }
+}
+
+/* ===============================
+   Markdown typography
+   =============================== */
+@layer components {
+  .md h1 { @apply text-2xl font-bold mt-6 mb-3; }
+  .md h2 { @apply text-xl font-semibold mt-5 mb-2; }
+  .md h3 { @apply text-lg font-semibold mt-4 mb-2; }
+  .md p  { @apply leading-7 text-neutral-800; }
+  .md li { @apply leading-7 text-neutral-800; }
+  .md ul { @apply list-disc ml-5; }
+  .md code { @apply font-mono text-[13px] bg-neutral-100 px-1.5 py-0.5 rounded; }
+  .md pre { @apply font-mono text-[13px] bg-neutral-900 text-white p-3 rounded-lg overflow-auto; }
+  .md hr  { @apply my-6 border-neutral-200; }
+}
