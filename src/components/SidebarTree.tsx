@@ -5,6 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { AppRole, getMyRoleBrowser, canEdit } from "@/lib/role.client";
+import { getMyNameBrowser } from "@/lib/profile.client";
+import { createPortal } from "react-dom";
+
 
 type PageType = "folder" | "doc" | "sop" | "report" | "calendar";
 
@@ -140,7 +143,7 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
   }, [pathname]);
 
   const [role, setRole] = useState<AppRole>("viewer");
-
+  const [myName, setMyName] = useState<string | null>(null);
   const [rows, setRows] = useState<PageRow[]>([]);
   const [roots, setRoots] = useState<PageNode[]>([]);
   const [idMap, setIdMap] = useState<Map<string, PageNode>>(new Map());
@@ -237,6 +240,10 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
     loadRole();
     loadPages();
     loadPins();
+      (async () => {
+    const n = await getMyNameBrowser();
+    setMyName(n);
+      })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -505,48 +512,60 @@ useEffect(() => {
         height: "100vh",
       }}
     >
-      {/* Header */}
-      <div
-        className="sticky top-0 z-20 p-4 border-b backdrop-blur"
-        style={{ borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(2,6,23,0.70)" }}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex items-center gap-2">
-            <div className="flex items-center gap-3">
-              <Image src="/logo-deus.webp" alt="Deus Code" width={88} height={88} priority />
-            </div>
-          </div>
+{/* Header */}
+<div
+  className="sticky top-0 z-20 p-4 border-b backdrop-blur"
+  style={{
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(2,6,23,0.70)",
+  }}
+>
+  {/* Row 1: Logo + Halo + Logout */}
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0 flex items-center gap-3">
+      <Image src="/Logo-Deus.webp" alt="Deus Code" width={72} height={72} priority />
 
-          <div className="flex items-center gap-2">
-            {canEdit(role) && (
-              <AddMenu
-                onCreate={(kind) => {
-                  openCreate(null, kind);
-                }}
-              />
-            )}
-
-            <button
-              type="button"
-              onClick={onLogout}
-              className="text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10"
-              title="Logout"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search pages..."
-            className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/50 focus:ring-2"
-            style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
-          />
+      <div className="min-w-0">
+        <div className="text-sm text-white/70 leading-tight">Halo,</div>
+        <div className="text-base font-semibold text-white truncate max-w-[180px]">
+          {myName ?? "User"}
         </div>
       </div>
+    </div>
+
+    <button
+      type="button"
+      onClick={onLogout}
+      className="shrink-0 text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10"
+      title="Logout"
+    >
+      Logout
+    </button>
+  </div>
+
+  {/* Row 2: AddMenu (pindah ke bawah biar gak nutup Halo) */}
+  <div className="mt-3 flex items-center justify-between gap-2">
+    <div className="flex-1">
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search pages..."
+        className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/50 focus:ring-2"
+        style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
+      />
+    </div>
+
+    {canEdit(role) && (
+      <div className="shrink-0">
+        <AddMenu
+          onCreate={(kind) => {
+            openCreate(null, kind);
+          }}
+        />
+      </div>
+    )}
+  </div>
+</div>
 
       {/* Body */}
       <div className="h-[calc(100vh-132px)] overflow-y-auto px-3 py-3">
@@ -882,19 +901,26 @@ useEffect(() => {
 }
 
 /* ---------------- AddMenu (FIX: tidak kepotong) ---------------- */
-
 function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const btnRef = useRef<HTMLButtonElement | null>(null);
-  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+  const [mounted, setMounted] = useState(false);
 
   const items: CreateKind[] = ["sop", "doc", "report", "calendar", "folder"];
-  const filtered = items.filter((k) => {
-    const m = kindMeta(k);
-    const s = `${m.label} ${m.desc}`.toLowerCase();
-    return s.includes(q.trim().toLowerCase());
-  });
+  const filtered = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    if (!qq) return items;
+    return items.filter((k) => {
+      const m = kindMeta(k);
+      const s = `${m.label} ${m.desc}`.toLowerCase();
+      return s.includes(qq);
+    });
+  }, [q]);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -904,25 +930,124 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  function openAtButton() {
-    const r = btnRef.current?.getBoundingClientRect();
-    const PANEL_W = 360;
-    const PANEL_H = 420;
-    const pad = 8;
+  // ✅ recompute posisi saat resize/scroll agar tetap nempel tombol
+  useEffect(() => {
+    if (!open) return;
 
-    const x = clamp((r?.left ?? 0), pad, window.innerWidth - PANEL_W - pad);
-    const y = clamp((r?.bottom ?? 0) + 8, pad, window.innerHeight - PANEL_H - pad);
+    function recompute() {
+      const btn = btnRef.current;
+      if (!btn) return;
 
-    setPos({ x, y });
-    setOpen(true);
+      const r = btn.getBoundingClientRect();
+
+      const PANEL_W = 360;
+      const PANEL_H = 420;
+      const gap = 10;
+      const pad = 8;
+
+      // default: muncul ke kanan tombol
+      let left = r.right + gap;
+      let top = r.top;
+
+      // clamp vertical
+      top = Math.max(pad, Math.min(top, window.innerHeight - PANEL_H - pad));
+
+      // kalau kanan gak muat, fallback: flip ke kiri (biar tetap keliatan)
+      if (left + PANEL_W + pad > window.innerWidth) {
+        left = r.left - PANEL_W - gap;
+      }
+
+      // kalau tetap gak muat (mobile), jadikan center-ish
+      if (left < pad) left = pad;
+
+      setPos({ left, top });
+    }
+
+    recompute();
+    window.addEventListener("resize", recompute);
+    window.addEventListener("scroll", recompute, true); // capture scroll container juga
+    return () => {
+      window.removeEventListener("resize", recompute);
+      window.removeEventListener("scroll", recompute, true);
+    };
+  }, [open]);
+
+  function toggleOpen() {
+    setOpen((v) => !v);
+    if (!open) setQ("");
   }
+
+  const panel = open && mounted ? (
+    <>
+      {/* overlay full screen supaya klik luar nutup, tapi menu muncul di kanan */}
+      <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+
+      <div
+        className="fixed z-[9999] w-[360px] rounded-xl border border-white/10 shadow-xl overflow-hidden"
+        style={{
+          left: pos.left,
+          top: pos.top,
+          background: "linear-gradient(180deg, rgba(10,10,10,0.98), rgba(2,6,23,0.98))",
+          color: "white",
+        }}
+      >
+        <div className="p-3 border-b border-white/10">
+          <div className="text-xs text-white/60 mb-2">Create new</div>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search type… (SOP, report, folder)"
+            className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/45 focus:ring-2"
+            style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
+            autoFocus
+          />
+        </div>
+
+        <div className="p-2">
+          {filtered.map((k) => {
+            const m = kindMeta(k);
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => {
+                  onCreate(k);
+                  setOpen(false);
+                  setQ("");
+                }}
+                className="w-full text-left rounded-lg px-3 py-3 hover:bg-white/10 transition flex items-start gap-3 border border-transparent hover:border-white/10"
+              >
+                <div className="h-10 w-10 rounded-lg grid place-items-center text-lg" style={{ background: m.accent }}>
+                  {m.emoji}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-semibold">{m.label}</div>
+                    <div className="text-xs text-white/45">{k === "folder" ? "Ctrl+Shift+F" : "Ctrl+Shift+N"}</div>
+                  </div>
+                  <div className="text-xs text-white/60 mt-1 line-clamp-2">{m.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+
+          {!filtered.length && <div className="text-xs text-white/50 px-3 py-4">No matches.</div>}
+        </div>
+
+        <div className="px-3 py-2 border-t border-white/10 text-xs text-white/50">
+          Tip: tekan <span className="text-white/70">ESC</span> untuk menutup.
+        </div>
+      </div>
+    </>
+  ) : null;
 
   return (
     <>
       <button
         ref={btnRef}
         type="button"
-        onClick={() => (open ? setOpen(false) : openAtButton())}
+        onClick={toggleOpen}
         className="text-sm px-3 py-2 rounded-md font-semibold shadow-sm inline-flex items-center gap-2"
         style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}
         title="Add"
@@ -932,69 +1057,8 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
         <span className="text-xs opacity-80">▾</span>
       </button>
 
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-
-          <div
-            className="fixed z-50 w-[360px] rounded-xl border border-white/10 shadow-xl overflow-hidden"
-            style={{
-              left: pos.x,
-              top: pos.y,
-              background: "linear-gradient(180deg, rgba(10,10,10,0.98), rgba(2,6,23,0.98))",
-              color: "white",
-            }}
-          >
-            <div className="p-3 border-b border-white/10">
-              <div className="text-xs text-white/60 mb-2">Create new</div>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search type… (SOP, report, folder)"
-                className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/45 focus:ring-2"
-                style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
-                autoFocus
-              />
-            </div>
-
-            <div className="p-2">
-              {filtered.map((k) => {
-                const m = kindMeta(k);
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => {
-                      onCreate(k);
-                      setOpen(false);
-                      setQ("");
-                    }}
-                    className="w-full text-left rounded-lg px-3 py-3 hover:bg-white/10 transition flex items-start gap-3 border border-transparent hover:border-white/10"
-                  >
-                    <div className="h-10 w-10 rounded-lg grid place-items-center text-lg" style={{ background: m.accent }}>
-                      {m.emoji}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="font-semibold">{m.label}</div>
-                        <div className="text-xs text-white/45">{k === "folder" ? "Ctrl+Shift+F" : "Ctrl+Shift+N"}</div>
-                      </div>
-                      <div className="text-xs text-white/60 mt-1 line-clamp-2">{m.desc}</div>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {!filtered.length && <div className="text-xs text-white/50 px-3 py-4">No matches.</div>}
-            </div>
-
-            <div className="px-3 py-2 border-t border-white/10 text-xs text-white/50">
-              Tip: tekan <span className="text-white/70">ESC</span> untuk menutup.
-            </div>
-          </div>
-        </>
-      )}
+      {/* ✅ Portal ke body supaya gak kena overflow sidebar */}
+      {mounted ? createPortal(panel, document.body) : null}
     </>
   );
 }
