@@ -7,6 +7,7 @@ import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { AppRole, getMyRoleBrowser, canEdit } from "@/lib/role.client";
 import { getMyNameBrowser } from "@/lib/profile.client";
 import { createPortal } from "react-dom";
+import Link from "next/link"; 
 
 
 type PageType = "folder" | "doc" | "sop" | "report" | "calendar";
@@ -523,7 +524,9 @@ useEffect(() => {
   {/* Row 1: Logo + Halo + Logout */}
   <div className="flex items-center justify-between gap-3">
     <div className="min-w-0 flex items-center gap-3">
-      <Image src="/logo-deus.webp" alt="Deus Code" width={72} height={72} priority />
+      <Link href="/p/deus-code" className="shrink-0">
+        <Image src="/logo-deus.webp" alt="Deus Code" width={72} height={72} priority />
+      </Link>
 
       <div className="min-w-0">
         <div className="text-sm text-white/70 leading-tight">Halo,</div>
@@ -533,15 +536,28 @@ useEffect(() => {
       </div>
     </div>
 
-    <button
-      type="button"
-      onClick={onLogout}
-      className="shrink-0 text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10"
-      title="Logout"
-    >
-      Logout
-    </button>
-  </div>
+<div className="flex items-center gap-2">
+  {/* Edit Profile */}
+  <Link
+    href="/profile"
+    className="text-sm px-2.5 py-1.5 rounded-md border border-white/15
+               hover:bg-white/10 transition"
+    title="Edit Profile"
+  >
+    Profile
+  </Link>
+
+  {/* Logout */}
+  <button
+    type="button"
+    onClick={onLogout}
+    className="text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10"
+    title="Logout"
+  >
+    Logout
+  </button>
+</div>
+</div>
 
   {/* Row 2: AddMenu (pindah ke bawah biar gak nutup Halo) */}
   <div className="mt-3 flex items-center justify-between gap-2">

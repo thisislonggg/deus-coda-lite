@@ -22,28 +22,21 @@ export default function SignupPage() {
     setMsg(null);
 
     const name = fullName.trim();
-    if (!name) {
-      setErr("Nama tidak boleh kosong.");
-      return;
-    }
-    if (!email.trim()) {
-      setErr("Email tidak boleh kosong.");
-      return;
-    }
-    if (password.length < 6) {
-      setErr("Password minimal 6 karakter.");
-      return;
-    }
+    const mail = email.trim();
+
+    if (!name) return setErr("Nama tidak boleh kosong.");
+    if (!mail) return setErr("Email tidak boleh kosong.");
+    if (password.length < 6) return setErr("Password minimal 6 karakter.");
 
     setLoading(true);
 
-    // 1) Sign up + simpan metadata (fallback kalau profiles gagal)
+    // 1) Sign up + simpan metadata (ini yang paling pasti tersimpan)
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: mail,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/login`,
-        data: { full_name: name }, // metadata
+        data: { full_name: name },
       },
     });
 
@@ -55,27 +48,34 @@ export default function SignupPage() {
 
     const userId = data.user?.id;
 
-    // 2) Insert ke profiles (kalau userId ada)
-    // NOTE: jika email confirmation aktif, userId tetap ada, tapi session bisa null.
-    // Insert ini biasanya tetap bisa jalan karena memakai anon key + RLS owner insert (auth.uid()).
-    // Kalau kamu pakai email confirmation dan auth.uid() belum ada (karena belum login),
-    // opsi terbaik adalah trigger via Edge Function / DB trigger.
-    // Namun di banyak setup, signUp akan memberi session dan auth.uid() valid.
+    // 2) Coba upsert ke profiles (lebih aman daripada insert)
+    // NOTE: Jika email confirmation aktif dan session belum ada,
+    // RLS bisa menolak upsert karena auth.uid() belum tersedia.
+    // Kita tidak hard-fail, cukup warning.
     if (userId) {
-      const { error: profileErr } = await supabase.from("profiles").insert({
-        id: userId,
-        full_name: name,
-      });
+      const { error: profileErr } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          full_name: name,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
 
-      // Kalau policy kamu ketat dan signup tidak menghasilkan session, ini bisa gagal.
-      // Tidak kita hard-fail signup, tapi kita tampilkan warning.
       if (profileErr) {
-        console.warn("Insert profiles failed:", profileErr.message);
+        console.warn("Upsert profiles failed:", profileErr.message);
+        // tetap lanjut sukses signup, tapi kasih info supaya kamu tau penyebabnya
+        setMsg(
+          "Signup berhasil. Nama tersimpan di akun, tapi belum masuk ke tabel profiles (biasanya karena email confirmation/RLS). Setelah login, nama tetap akan muncul dari metadata."
+        );
+      } else {
+        setMsg("Signup berhasil. Cek email untuk verifikasi (kalau email confirmation aktif).");
       }
+    } else {
+      setMsg("Signup berhasil. Cek email untuk verifikasi (kalau email confirmation aktif).");
     }
 
     setLoading(false);
-    setMsg("Signup berhasil. Cek email untuk verifikasi (kalau email confirmation aktif).");
   }
 
   return (
@@ -102,7 +102,8 @@ export default function SignupPage() {
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Nama Lengkap"
             type="text"
-            className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-3 text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-yellow-400/30"
+            disabled={loading}
+            className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-3 text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-yellow-400/30 disabled:opacity-60"
           />
 
           {/* Email */}
@@ -111,7 +112,8 @@ export default function SignupPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
             type="email"
-            className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-3 text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-yellow-400/30"
+            disabled={loading}
+            className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-3 text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-yellow-400/30 disabled:opacity-60"
           />
 
           {/* Password */}
@@ -120,7 +122,8 @@ export default function SignupPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password (min 6 karakter)"
             type="password"
-            className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-3 text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-yellow-400/30"
+            disabled={loading}
+            className="w-full rounded-lg bg-white/10 border border-white/15 px-3 py-3 text-white outline-none placeholder:text-white/40 focus:ring-2 focus:ring-yellow-400/30 disabled:opacity-60"
           />
 
           {err && <div className="text-sm text-red-300">{err}</div>}
