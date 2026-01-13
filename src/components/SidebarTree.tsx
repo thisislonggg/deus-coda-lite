@@ -523,7 +523,7 @@ useEffect(() => {
   {/* Row 1: Logo + Halo + Logout */}
   <div className="flex items-center justify-between gap-3">
     <div className="min-w-0 flex items-center gap-3">
-      <Image src="/Logo-Deus.webp" alt="Deus Code" width={72} height={72} priority />
+      <Image src="/logo-deus.webp" alt="Deus Code" width={72} height={72} priority />
 
       <div className="min-w-0">
         <div className="text-sm text-white/70 leading-tight">Halo,</div>
