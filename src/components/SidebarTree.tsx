@@ -1,50 +1,53 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 import { AppRole, getMyRoleBrowser, canEdit } from "@/lib/role.client";
 import { getMyNameBrowser } from "@/lib/profile.client";
-import { createPortal } from "react-dom";
-import Link from "next/link"; 
 
-
-type PageType = "folder" | "doc" | "sop" | "report" | "calendar";
+type PageType = "folder" | "doc" | "sop" | "report" | "calendar" | "link";
 
 type PageRow = {
   id: string;
   title: string;
   slug: string;
-  parent_id: string | null;
   type: PageType;
+  parent_id: string | null;
   status?: string | null;
+  pinned?: boolean | null;
+  external_url?: string | null;
 };
 
 type PageNode = PageRow & { children: PageNode[] };
 
-type CreateKind = "sop" | "doc" | "report" | "calendar" | "folder";
+type CreateKind = "sop" | "doc" | "report" | "calendar" | "folder" | "link";
 
-type CtxTarget =
-  | { kind: "page"; node: PageNode }
-  | { kind: "folder"; node: PageNode };
+type CtxTarget = { kind: "page" | "folder"; node: PageNode };
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function typeEmoji(type: PageType) {
-  switch (type) {
+function typeEmoji(t: PageType) {
+  switch (t) {
     case "folder":
       return "📁";
-    case "sop":
-      return "📘";
     case "doc":
       return "📄";
+    case "sop":
+      return "📘";
     case "report":
       return "📊";
     case "calendar":
       return "📅";
+    case "link":
+      return "🔗";
+    default:
+      return "📄";
   }
 }
 
@@ -60,6 +63,8 @@ function kindMeta(kind: CreateKind) {
       return { label: "Calendar", emoji: "📅", desc: "Jadwal / timeline", accent: "rgba(16,185,129,0.18)" };
     case "folder":
       return { label: "Folder", emoji: "📁", desc: "Kelompokkan halaman", accent: "rgba(255,255,255,0.08)" };
+    case "link":
+      return { label: "Link", emoji: "🔗", desc: "Google Docs/Sheets/URL", accent: "rgba(255,255,255,0.08)" };
   }
 }
 
@@ -91,13 +96,9 @@ function buildTree(rows: PageRow[]) {
   return { roots, map };
 }
 
-function findPathIds(
-  map: Map<string, PageNode>,
-  activeSlug: string | null
-) {
+function findPathIds(map: Map<string, PageNode>, activeSlug: string | null) {
   if (!activeSlug) return [];
 
-  // cari node aktif (page ATAU folder)
   const target = [...map.values()].find((n) => n.slug === activeSlug);
   if (!target) return [];
 
@@ -145,6 +146,7 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
 
   const [role, setRole] = useState<AppRole>("viewer");
   const [myName, setMyName] = useState<string | null>(null);
+
   const [rows, setRows] = useState<PageRow[]>([]);
   const [roots, setRoots] = useState<PageNode[]>([]);
   const [idMap, setIdMap] = useState<Map<string, PageNode>>(new Map());
@@ -159,6 +161,7 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
   const [createType, setCreateType] = useState<CreateKind>("sop");
   const [createTitle, setCreateTitle] = useState("");
   const [createParentId, setCreateParentId] = useState<string | null>(null);
+  const [createUrl, setCreateUrl] = useState(""); // ✅ khusus link
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState<string | null>(null);
 
@@ -184,8 +187,16 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
     setRole(r);
   }
 
+  async function loadMyName() {
+    const n = await getMyNameBrowser();
+    setMyName(n);
+  }
+
   async function loadPages() {
-    const q = supabase.from("pages").select("id,title,slug,parent_id,type,status").order("title", { ascending: true });
+    const q = supabase
+      .from("pages")
+      .select("id,title,slug,parent_id,type,status,external_url")
+      .order("title", { ascending: true });
 
     const { data, error } = await q;
 
@@ -207,7 +218,6 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
     const uid = userRes.user?.id;
     if (!uid) return;
 
-    // table: page_pins(user_id uuid, page_id uuid, created_at timestamptz)
     const { data, error } = await supabase.from("page_pins").select("page_id").eq("user_id", uid);
     if (error) {
       console.warn("loadPins error:", error.message);
@@ -239,31 +249,26 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
 
   useEffect(() => {
     loadRole();
+    loadMyName();
     loadPages();
     loadPins();
-      (async () => {
-    const n = await getMyNameBrowser();
-    setMyName(n);
-      })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-useEffect(() => {
-  if (!activeSlug) return;
-  if (idMap.size === 0) return;
+  // ✅ auto expand folder kalau folder/page sedang dibuka
+  useEffect(() => {
+    if (!activeSlug) return;
+    if (idMap.size === 0) return;
 
-  const pathIds = findPathIds(idMap, activeSlug);
-  if (!pathIds.length) return;
+    const pathIds = findPathIds(idMap, activeSlug);
+    if (!pathIds.length) return;
 
-  setExpanded((prev) => {
-    const next = { ...prev };
-    pathIds.forEach((id) => {
-      next[id] = true; // expand semua parent + folder itu sendiri
+    setExpanded((prev) => {
+      const next = { ...prev };
+      pathIds.forEach((id) => (next[id] = true));
+      return next;
     });
-    return next;
-  });
-}, [activeSlug, idMap]);
-
+  }, [activeSlug, idMap]);
 
   const filteredRoots = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -283,9 +288,7 @@ useEffect(() => {
     const mapById = new Map<string, PageRow>();
     rows.forEach((r) => mapById.set(r.id, r));
     const items = [...pinIds].map((id) => mapById.get(id)).filter(Boolean) as PageRow[];
-    return items
-      .filter((x) => x.type !== "folder")
-      .sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
+    return items.filter((x) => x.type !== "folder").sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
   }, [pinIds, rows]);
 
   const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !(p[id] ?? false) }));
@@ -300,6 +303,7 @@ useEffect(() => {
     setCreateParentId(parentId);
     setCreateTitle("");
     setCreateType(kind);
+    setCreateUrl("");
     setCreateErr(null);
     setIsOpen(true);
   }
@@ -314,6 +318,20 @@ useEffect(() => {
     if (!t) {
       setCreateErr("Judul tidak boleh kosong.");
       return;
+    }
+
+    if (createType === "link") {
+      const u = createUrl.trim();
+      if (!u) {
+        setCreateErr("URL tidak boleh kosong untuk Link.");
+        return;
+      }
+      try {
+        new URL(u);
+      } catch {
+        setCreateErr("URL tidak valid. Contoh: https://docs.google.com/...");
+        return;
+      }
     }
 
     setCreating(true);
@@ -339,11 +357,8 @@ useEffect(() => {
     const finalSlug = exists ? `${baseSlug}-${Math.random().toString(16).slice(2, 6)}` : baseSlug;
 
     const isFolder = createType === "folder";
-
-    // ✅ type sesuai pilihan (bukan selalu sop)
     const finalType: PageType = isFolder ? "folder" : (createType as PageType);
 
-    // ✅ FIX: kalau DB content_md NOT NULL, folder pakai "" (bukan null)
     const defaultContent =
       createType === "sop"
         ? `# ${t}\n\n## Tujuan\n...\n\n## Tools\n...\n\n## Langkah-langkah\n- ...`
@@ -351,6 +366,8 @@ useEffect(() => {
         ? `# ${t}\n\n## Ringkasan\n...\n\n## Data\n- ...\n\n## Insight\n- ...`
         : createType === "calendar"
         ? `# ${t}\n\n## Agenda\n- ...\n\n## Timeline\n- ...`
+        : createType === "link"
+        ? `# ${t}\n\nKlik link di bawah:\n\n- ${createUrl.trim()}`
         : `# ${t}\n\nTulis catatan di sini...`;
 
     const insertPayload: any = {
@@ -361,8 +378,8 @@ useEffect(() => {
       status: showDrafts ? "draft" : "published",
       created_by: uid,
       updated_by: uid,
-      // folder harus string kosong jika column NOT NULL
       content_md: isFolder ? "" : defaultContent,
+      external_url: createType === "link" ? createUrl.trim() : null,
     };
 
     const { data, error } = await supabase.from("pages").insert(insertPayload).select("id,slug,type").maybeSingle();
@@ -377,10 +394,11 @@ useEffect(() => {
     setIsOpen(false);
     await loadPages();
 
-    if (data?.type !== "folder" && data?.slug) {
+    if (data?.slug) {
       router.push(`/p/${data.slug}`);
       router.refresh();
-    } else if (data?.id) {
+    }
+    if (data?.id) {
       setExpanded((p) => ({ ...p, [data.id]: true }));
     }
   }
@@ -404,7 +422,6 @@ useEffect(() => {
 
     const node = idMap.get(deleteId);
 
-    // larang delete folder yg masih punya children
     if (node?.type === "folder" && node.children?.length) {
       setDeleting(false);
       setDeleteErr("Folder masih punya isi. Hapus isinya dulu.");
@@ -513,75 +530,66 @@ useEffect(() => {
         height: "100vh",
       }}
     >
-{/* Header */}
-<div
-  className="sticky top-0 z-20 p-4 border-b backdrop-blur"
-  style={{
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(2,6,23,0.70)",
-  }}
->
-  {/* Row 1: Logo + Halo + Logout */}
-  <div className="flex items-center justify-between gap-3">
-    <div className="min-w-0 flex items-center gap-3">
-      <Link href="/p/deus-code" className="shrink-0">
-        <Image src="/logo-deus.webp" alt="Deus Code" width={72} height={72} priority />
-      </Link>
+      {/* Header */}
+      <div
+        className="sticky top-0 z-20 p-4 border-b backdrop-blur"
+        style={{
+          borderColor: "rgba(255,255,255,0.10)",
+          backgroundColor: "rgba(2,6,23,0.70)",
+        }}
+      >
+        {/* Row 1: Logo + Halo + Right buttons */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex items-center gap-3">
+            <Link href="/p/deus-code" className="shrink-0">
+              <Image src="/logo-deus.webp" alt="Deus Code" width={72} height={72} priority />
+            </Link>
 
-      <div className="min-w-0">
-        <div className="text-sm text-white/70 leading-tight">Halo,</div>
-        <div className="text-base font-semibold text-white truncate max-w-[180px]">
-          {myName ?? "User"}
+            <div className="min-w-0">
+              <div className="text-sm text-white/70 leading-tight">Halo,</div>
+              <div className="text-base font-semibold text-white truncate max-w-[180px]">{myName ?? "User"}</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link
+              href="/profile"
+              className="text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10 transition"
+              title="Edit Profile"
+            >
+              Profile
+            </Link>
+
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10"
+              title="Logout"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+
+        {/* Row 2: search + add */}
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex-1">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search pages..."
+              className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/50 focus:ring-2"
+              style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
+            />
+          </div>
+
+          {canEdit(role) && (
+            <div className="shrink-0">
+              <AddMenu onCreate={(kind) => openCreate(null, kind)} />
+            </div>
+          )}
         </div>
       </div>
-    </div>
-
-<div className="flex items-center gap-2">
-  {/* Edit Profile */}
-  <Link
-    href="/profile"
-    className="text-sm px-2.5 py-1.5 rounded-md border border-white/15
-               hover:bg-white/10 transition"
-    title="Edit Profile"
-  >
-    Profile
-  </Link>
-
-  {/* Logout */}
-  <button
-    type="button"
-    onClick={onLogout}
-    className="text-sm px-2.5 py-1.5 rounded-md border border-white/15 hover:bg-white/10"
-    title="Logout"
-  >
-    Logout
-  </button>
-</div>
-</div>
-
-  {/* Row 2: AddMenu (pindah ke bawah biar gak nutup Halo) */}
-  <div className="mt-3 flex items-center justify-between gap-2">
-    <div className="flex-1">
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search pages..."
-        className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/50 focus:ring-2"
-        style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
-      />
-    </div>
-
-    {canEdit(role) && (
-      <div className="shrink-0">
-        <AddMenu
-          onCreate={(kind) => {
-            openCreate(null, kind);
-          }}
-        />
-      </div>
-    )}
-  </div>
-</div>
 
       {/* Body */}
       <div className="h-[calc(100vh-132px)] overflow-y-auto px-3 py-3">
@@ -606,9 +614,7 @@ useEffect(() => {
                   }}
                   className={[
                     "w-full text-left rounded-lg px-2.5 py-2 text-sm transition border flex items-center gap-2",
-                    activeSlug === p.slug
-                      ? "text-white border-white/10"
-                      : "text-white/85 border-transparent hover:bg-white/10",
+                    activeSlug === p.slug ? "text-white border-white/10" : "text-white/85 border-transparent hover:bg-white/10",
                   ].join(" ")}
                   style={{
                     backgroundColor: activeSlug === p.slug ? "rgba(241,196,15,0.14)" : undefined,
@@ -647,6 +653,7 @@ useEffect(() => {
       {isOpen && canEdit(role) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => !creating && setIsOpen(false)} />
+
           <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
             <div className="p-4 border-b border-white/10">
               <div className="text-sm font-semibold">Add New</div>
@@ -656,7 +663,7 @@ useEffect(() => {
             <div className="p-4 space-y-3">
               {/* type grid */}
               <div className="grid grid-cols-2 gap-2">
-                {(["sop", "doc", "report", "calendar", "folder"] as CreateKind[]).map((k) => {
+                {(["sop", "doc", "report", "calendar", "folder", "link"] as CreateKind[]).map((k) => {
                   const m = kindMeta(k);
                   const active = createType === k;
                   return (
@@ -667,9 +674,7 @@ useEffect(() => {
                       className={`rounded-lg px-3 py-3 text-sm border text-left flex items-center gap-3 ${
                         active ? "border-yellow-400/60" : "border-white/10"
                       }`}
-                      style={{
-                        backgroundColor: active ? "rgba(241,196,15,0.12)" : "rgba(255,255,255,0.04)",
-                      }}
+                      style={{ backgroundColor: active ? "rgba(241,196,15,0.12)" : "rgba(255,255,255,0.04)" }}
                     >
                       <span className="text-lg">{m.emoji}</span>
                       <span className="min-w-0">
@@ -688,6 +693,17 @@ useEffect(() => {
                 className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
                 style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }}
               />
+
+              {/* ✅ Input URL jika Link */}
+              {createType === "link" && (
+                <input
+                  value={createUrl}
+                  onChange={(e) => setCreateUrl(e.target.value)}
+                  placeholder="https://docs.google.com/... atau https://..."
+                  className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
+                  style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }}
+                />
+              )}
 
               {createErr && <div className="text-xs text-red-300">{createErr}</div>}
             </div>
@@ -838,17 +854,15 @@ useEffect(() => {
                 }}
               />
 
-              {ctxTarget.kind === "page" && (
-                <CtxItem
-                  label="Open in new tab"
-                  subLabel="Buka tab baru"
-                  icon="🗂️"
-                  onClick={() => {
-                    setCtxOpen(false);
-                    openNewTab(ctxTarget.node.slug);
-                  }}
-                />
-              )}
+              <CtxItem
+                label="Open in new tab"
+                subLabel="Buka tab baru"
+                icon="🗂️"
+                onClick={() => {
+                  setCtxOpen(false);
+                  openNewTab(ctxTarget.node.slug);
+                }}
+              />
 
               <CtxSep />
 
@@ -916,7 +930,8 @@ useEffect(() => {
   );
 }
 
-/* ---------------- AddMenu (FIX: tidak kepotong) ---------------- */
+/* ---------------- AddMenu (PORTAL + muncul ke kanan) ---------------- */
+
 function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -925,7 +940,8 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
   const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
   const [mounted, setMounted] = useState(false);
 
-  const items: CreateKind[] = ["sop", "doc", "report", "calendar", "folder"];
+  const items: CreateKind[] = ["sop", "doc", "report", "calendar", "folder", "link"];
+
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
     if (!qq) return items;
@@ -946,7 +962,7 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // ✅ recompute posisi saat resize/scroll agar tetap nempel tombol
+  // ✅ posisi muncul ke kanan tombol, dan tetap nempel saat scroll/resize
   useEffect(() => {
     if (!open) return;
 
@@ -961,19 +977,16 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
       const gap = 10;
       const pad = 8;
 
-      // default: muncul ke kanan tombol
-      let left = r.right + gap;
+      let left = r.right + gap; // ✅ kanan tombol
       let top = r.top;
 
-      // clamp vertical
       top = Math.max(pad, Math.min(top, window.innerHeight - PANEL_H - pad));
 
-      // kalau kanan gak muat, fallback: flip ke kiri (biar tetap keliatan)
+      // kalau kanan gak muat, flip ke kiri
       if (left + PANEL_W + pad > window.innerWidth) {
         left = r.left - PANEL_W - gap;
       }
 
-      // kalau tetap gak muat (mobile), jadikan center-ish
       if (left < pad) left = pad;
 
       setPos({ left, top });
@@ -981,7 +994,7 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
 
     recompute();
     window.addEventListener("resize", recompute);
-    window.addEventListener("scroll", recompute, true); // capture scroll container juga
+    window.addEventListener("scroll", recompute, true);
     return () => {
       window.removeEventListener("resize", recompute);
       window.removeEventListener("scroll", recompute, true);
@@ -993,70 +1006,69 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
     if (!open) setQ("");
   }
 
-  const panel = open && mounted ? (
-    <>
-      {/* overlay full screen supaya klik luar nutup, tapi menu muncul di kanan */}
-      <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+  const panel =
+    open && mounted ? (
+      <>
+        <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+        <div
+          className="fixed z-[9999] w-[360px] rounded-xl border border-white/10 shadow-xl overflow-hidden"
+          style={{
+            left: pos.left,
+            top: pos.top,
+            background: "linear-gradient(180deg, rgba(10,10,10,0.98), rgba(2,6,23,0.98))",
+            color: "white",
+          }}
+        >
+          <div className="p-3 border-b border-white/10">
+            <div className="text-xs text-white/60 mb-2">Create new</div>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search type… (SOP, report, folder)"
+              className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/45 focus:ring-2"
+              style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
+              autoFocus
+            />
+          </div>
 
-      <div
-        className="fixed z-[9999] w-[360px] rounded-xl border border-white/10 shadow-xl overflow-hidden"
-        style={{
-          left: pos.left,
-          top: pos.top,
-          background: "linear-gradient(180deg, rgba(10,10,10,0.98), rgba(2,6,23,0.98))",
-          color: "white",
-        }}
-      >
-        <div className="p-3 border-b border-white/10">
-          <div className="text-xs text-white/60 mb-2">Create new</div>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search type… (SOP, report, folder)"
-            className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/10 border border-white/15 placeholder:text-white/45 focus:ring-2"
-            style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }}
-            autoFocus
-          />
-        </div>
-
-        <div className="p-2">
-          {filtered.map((k) => {
-            const m = kindMeta(k);
-            return (
-              <button
-                key={k}
-                type="button"
-                onClick={() => {
-                  onCreate(k);
-                  setOpen(false);
-                  setQ("");
-                }}
-                className="w-full text-left rounded-lg px-3 py-3 hover:bg-white/10 transition flex items-start gap-3 border border-transparent hover:border-white/10"
-              >
-                <div className="h-10 w-10 rounded-lg grid place-items-center text-lg" style={{ background: m.accent }}>
-                  {m.emoji}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-semibold">{m.label}</div>
-                    <div className="text-xs text-white/45">{k === "folder" ? "Ctrl+Shift+F" : "Ctrl+Shift+N"}</div>
+          <div className="p-2">
+            {filtered.map((k) => {
+              const m = kindMeta(k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    onCreate(k);
+                    setOpen(false);
+                    setQ("");
+                  }}
+                  className="w-full text-left rounded-lg px-3 py-3 hover:bg-white/10 transition flex items-start gap-3 border border-transparent hover:border-white/10"
+                >
+                  <div className="h-10 w-10 rounded-lg grid place-items-center text-lg" style={{ background: m.accent }}>
+                    {m.emoji}
                   </div>
-                  <div className="text-xs text-white/60 mt-1 line-clamp-2">{m.desc}</div>
-                </div>
-              </button>
-            );
-          })}
 
-          {!filtered.length && <div className="text-xs text-white/50 px-3 py-4">No matches.</div>}
-        </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="font-semibold">{m.label}</div>
+                      <div className="text-xs text-white/45">{k === "folder" ? "Ctrl+Shift+F" : "Ctrl+Shift+N"}</div>
+                    </div>
+                    <div className="text-xs text-white/60 mt-1 line-clamp-2">{m.desc}</div>
+                  </div>
+                </button>
+              );
+            })}
 
-        <div className="px-3 py-2 border-t border-white/10 text-xs text-white/50">
-          Tip: tekan <span className="text-white/70">ESC</span> untuk menutup.
+            {!filtered.length && <div className="text-xs text-white/50 px-3 py-4">No matches.</div>}
+          </div>
+
+          <div className="px-3 py-2 border-t border-white/10 text-xs text-white/50">
+            Tip: tekan <span className="text-white/70">ESC</span> untuk menutup.
+          </div>
         </div>
-      </div>
-    </>
-  ) : null;
+      </>
+    ) : null;
 
   return (
     <>
@@ -1073,7 +1085,7 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
         <span className="text-xs opacity-80">▾</span>
       </button>
 
-      {/* ✅ Portal ke body supaya gak kena overflow sidebar */}
+      {/* ✅ Portal supaya tidak kepotong overflow sidebar */}
       {mounted ? createPortal(panel, document.body) : null}
     </>
   );
@@ -1121,12 +1133,11 @@ function TreeList({
             <div
               onContextMenu={(e) => onContextMenuNode(e, n)}
               onClick={(e) => {
-                // Kalau klik tombol action (Add/Del) atau toggle arrow, jangan navigate
                 const target = e.target as HTMLElement;
                 if (target.closest("[data-action]")) return;
                 if (target.closest("[data-toggle]")) return;
 
-                // ✅ Folder & Page sama-sama bisa dibuka (navigate)
+                // ✅ folder juga bisa dibuka sebagai page
                 onNavigate(n.slug);
               }}
               className={[
@@ -1138,7 +1149,6 @@ function TreeList({
                 backgroundColor: isActive ? "rgba(241,196,15,0.14)" : undefined,
               }}
             >
-              {/* ✅ Tombol panah khusus untuk expand/collapse folder */}
               {isFolder ? (
                 <button
                   type="button"
@@ -1159,7 +1169,6 @@ function TreeList({
 
               <span className="text-white/70">{icon}</span>
 
-              {/* ✅ Judul selalu navigate (folder juga) */}
               <button
                 type="button"
                 data-action="title"
@@ -1183,8 +1192,8 @@ function TreeList({
                       e.preventDefault();
                       e.stopPropagation();
                       onAdd(n.id);
-                      // optional: auto expand biar kelihatan hasil tambahannya
-                      onToggle(n.id);
+                      // optional auto expand
+                      if (!isOpen) onToggle(n.id);
                     }}
                     className="text-xs px-2 py-1 rounded-md hover:bg-white/10"
                     style={{ color: "rgb(var(--dc-primary))" }}
@@ -1193,7 +1202,6 @@ function TreeList({
                     + Add
                   </button>
                 )}
-
                 {canEdit && (
                   <button
                     data-action="delete"
@@ -1212,7 +1220,6 @@ function TreeList({
               </div>
             </div>
 
-            {/* ✅ Child tetap tampil kalau folder expanded */}
             {isFolder && hasChildren && isOpen && (
               <div className="mt-1">
                 <TreeList
@@ -1235,7 +1242,6 @@ function TreeList({
     </div>
   );
 }
-
 
 /* ---------------- Context Menu UI ---------------- */
 

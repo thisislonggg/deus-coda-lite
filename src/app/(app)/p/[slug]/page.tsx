@@ -7,33 +7,49 @@ import FolderContentsGrid from "@/components/FolderContentsGrid";
 import RichEditor from "@/components/RichEditor";
 import MarkdownView from "@/components/MarkdownView";
 
-// ✅ role
+// role
 import { AppRole, getMyRoleBrowser, canEdit } from "@/lib/role.client";
 
-type PageType = "folder" | "doc" | "sop" | "report" | "calendar";
+type PageType = "folder" | "doc" | "sop" | "report" | "calendar" | "link";
 
 type PageRow = {
   id: string;
   title: string;
   slug: string;
   type: PageType;
-  content_md?: string | null; // kamu simpan HTML di sini
+  content_md?: string | null;     // HTML notes
   status?: string | null;
+  external_url?: string | null;   // ✅ link url
 };
+
+function toEmbeddableGoogleUrl(url: string) {
+  // Sheets
+  if (url.includes("docs.google.com/spreadsheets")) {
+    return url.replace(/\/edit.*$/, "/preview");
+  }
+  // Docs
+  if (url.includes("docs.google.com/document")) {
+    return url.replace(/\/edit.*$/, "/preview");
+  }
+  // Slides
+  if (url.includes("docs.google.com/presentation")) {
+    return url.replace(/\/edit.*$/, "/preview");
+  }
+  return url; // fallback
+}
 
 export default function PageView() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
 
   const supabase = useMemo(() => createSupabaseBrowser(), []);
-
   const [role, setRole] = useState<AppRole>("viewer");
 
   const [page, setPage] = useState<PageRow | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [mode, setMode] = useState<"edit" | "preview">("preview");
-  const [draftContent, setDraftContent] = useState<string>(""); // HTML
+  const [draftContent, setDraftContent] = useState<string>(""); // HTML notes
   const [dirty, setDirty] = useState(false);
 
   const [saving, setSaving] = useState(false);
@@ -54,7 +70,7 @@ export default function PageView() {
     };
   }, []);
 
-  // ✅ load role
+  // load role
   useEffect(() => {
     (async () => {
       const r = await getMyRoleBrowser();
@@ -62,11 +78,12 @@ export default function PageView() {
     })();
   }, []);
 
-  // ✅ kalau role tidak boleh edit, paksa preview terus
+  // force preview if not allowed
   useEffect(() => {
     if (!allowEdit) setMode("preview");
   }, [allowEdit]);
 
+  // load page
   useEffect(() => {
     let mounted = true;
 
@@ -75,7 +92,7 @@ export default function PageView() {
 
       const { data, error } = await supabase
         .from("pages")
-        .select("id,title,slug,type,content_md,status")
+        .select("id,title,slug,type,content_md,status,external_url")
         .eq("slug", slug)
         .maybeSingle();
 
@@ -92,10 +109,8 @@ export default function PageView() {
 
       const p = (data ?? null) as PageRow | null;
       setPage(p);
-
       setDraftContent(p?.content_md ?? "");
       setDirty(false);
-
       setLoading(false);
     }
 
@@ -108,7 +123,6 @@ export default function PageView() {
   async function handleSave() {
     if (!page) return;
 
-    // ✅ viewer tidak boleh save
     if (!allowEdit) {
       flash("Anda tidak punya izin untuk edit.");
       return;
@@ -122,7 +136,10 @@ export default function PageView() {
     setSaving(true);
     setSaveMsg(null);
 
-    const { error } = await supabase.from("pages").update({ content_md: draftContent }).eq("id", page.id);
+    const { error } = await supabase
+      .from("pages")
+      .update({ content_md: draftContent })
+      .eq("id", page.id);
 
     setSaving(false);
 
@@ -136,21 +153,18 @@ export default function PageView() {
     flash("Saved ✅");
   }
 
-if (loading)
-  return (
-    <div className="min-h-screen bg-slate-950 text-white p-6">
-      <div className="text-white/60">Loading...</div>
-    </div>
-  );
-
-if (!page)
-  return (
-    <div className="min-h-screen bg-slate-950 text-white p-6">
-      <div className="text-white/60">Page tidak ditemukan.</div>
-    </div>
-  );
+  // ✅ biar loading tidak putih (tetap gelap)
+  if (loading) {
+    return <div className="min-h-screen bg-slate-950 text-white/60 p-6">Loading...</div>;
+  }
+  if (!page) {
+    return <div className="min-h-screen bg-slate-950 text-white/60 p-6">Page tidak ditemukan.</div>;
+  }
 
   const isFolder = page.type === "folder";
+  const isLink = page.type === "link";
+  const url = (page.external_url ?? "").trim();
+  const embedUrl = url ? toEmbeddableGoogleUrl(url) : "";
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6">
@@ -159,12 +173,17 @@ if (!page)
         <div className="min-w-0">
           <div className="text-3xl font-bold text-white truncate">{page.title}</div>
           <div className="text-sm text-white/55 mt-1">
-            {isFolder ? "Folder" : "Page"} • {page.status === "draft" ? "Draft" : "Published"} •{" "}
-            {dirty ? <span className="text-yellow-300/90">Unsaved</span> : <span className="text-emerald-300/90">Saved</span>}
+            {isFolder ? "Folder" : isLink ? "Google Link" : "Page"} •{" "}
+            {page.status === "draft" ? "Draft" : "Published"} •{" "}
+            {dirty ? (
+              <span className="text-yellow-300/90">Unsaved</span>
+            ) : (
+              <span className="text-emerald-300/90">Saved</span>
+            )}
           </div>
         </div>
 
-        {/* ✅ tombol kanan atas: hanya tampil kalau boleh edit */}
+        {/* Buttons (edit only for admin/editor) */}
         {allowEdit && (
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -210,11 +229,48 @@ if (!page)
         </>
       )}
 
-      {/* Content card */}
-      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
-        <div className="text-sm font-semibold text-white/85 mb-3">{isFolder ? "Catatan Folder" : "Konten"}</div>
+      {/* ✅ Coda-like Link Preview Card */}
+      {isLink && (
+        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 mb-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-white/90">Preview</div>
+            </div>
 
-        {/* ✅ EDIT mode hanya untuk allowEdit, selain itu selalu preview */}
+            {url && (
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-3 py-2 rounded-md text-sm border border-white/15 hover:bg-white/10"
+              >
+                🔗 Open
+              </a>
+            )}
+          </div>
+
+          {embedUrl ? (
+            <div className="rounded-xl overflow-hidden border border-white/10 bg-black">
+              <iframe
+                src={embedUrl}
+                className="w-full h-[70vh]"
+                allow="clipboard-read; clipboard-write"
+              />
+            </div>
+          ) : (
+            <div className="text-sm text-white/60">
+              Link belum ada atau format link belum didukung untuk embed.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Notes / Content */}
+      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+        <div className="text-sm font-semibold text-white/85 mb-3">
+          {isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}
+        </div>
+
         {allowEdit && mode === "edit" ? (
           <RichEditor
             value={draftContent}
@@ -223,7 +279,7 @@ if (!page)
               setDraftContent(nextHtml);
               setDirty(true);
             }}
-            placeholder="Tulis pakai Heading (H1/H2/H3), list, dll..."
+            placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
         ) : (
           <MarkdownView html={draftContent} />
