@@ -359,16 +359,6 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
     const isFolder = createType === "folder";
     const finalType: PageType = isFolder ? "folder" : (createType as PageType);
 
-    const defaultContent =
-      createType === "sop"
-        ? `# ${t}\n\n## Tujuan\n...\n\n## Tools\n...\n\n## Langkah-langkah\n- ...`
-        : createType === "report"
-        ? `# ${t}\n\n## Ringkasan\n...\n\n## Data\n- ...\n\n## Insight\n- ...`
-        : createType === "calendar"
-        ? `# ${t}\n\n## Agenda\n- ...\n\n## Timeline\n- ...`
-        : createType === "link"
-        ? `# ${t}\n\nKlik link di bawah:\n\n- ${createUrl.trim()}`
-        : `# ${t}\n\nTulis catatan di sini...`;
 
     const insertPayload: any = {
       title: t,
@@ -378,7 +368,6 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
       status: showDrafts ? "draft" : "published",
       created_by: uid,
       updated_by: uid,
-      content_md: isFolder ? "" : defaultContent,
       external_url: createType === "link" ? createUrl.trim() : null,
     };
 
