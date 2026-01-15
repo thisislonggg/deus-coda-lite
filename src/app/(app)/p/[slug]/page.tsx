@@ -282,7 +282,20 @@ export default function PageView() {
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
         ) : (
-          <MarkdownView html={draftContent} />
+<div
+  className="
+    max-w-full min-w-0
+    whitespace-pre-wrap break-words [overflow-wrap:anywhere]
+    [&_pre]:whitespace-pre-wrap
+    [&_pre]:break-words
+    [&_pre]:[overflow-wrap:anywhere]
+    [&_pre]:overflow-x-auto
+    [&_code]:break-words
+    [&_a]:break-all
+  "
+>
+  <MarkdownView html={draftContent} />
+</div>
         )}
       </div>
     </div>
