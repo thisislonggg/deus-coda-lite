@@ -368,7 +368,7 @@ export default function PageView() {
       )}
 
       {/* Notes / Content */}
-      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] min-w-0">
+      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] min-w-0">
         <div className="text-sm font-semibold text-white/85 mb-3">{isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}</div>
 
         {allowEdit && mode === "edit" ? (
@@ -383,20 +383,20 @@ export default function PageView() {
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
         ) : (
-          <div
-            className="
-              max-w-full min-w-0
-              whitespace-pre-wrap break-words [overflow-wrap:anywhere]
-              [&_pre]:whitespace-pre-wrap
-              [&_pre]:break-words
-              [&_pre]:[overflow-wrap:anywhere]
-              [&_pre]:overflow-x-auto
-              [&_code]:break-words
-              [&_a]:break-all
-            "
-          >
-            <MarkdownView html={draftContent} />
-          </div>
+<div
+  className="
+    text-white/85
+    [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:my-3
+    [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:my-3
+    [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:my-3
+    [&_p]:my-2
+    [&_li]:my-1
+
+    whitespace-pre-wrap break-words [overflow-wrap:anywhere]
+    [&_pre]:overflow-x-auto
+  "
+  dangerouslySetInnerHTML={{ __html: draftContent }}
+/>
         )}
       </div>
     </div>
