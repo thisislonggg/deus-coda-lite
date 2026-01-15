@@ -275,12 +275,14 @@ export default function PageView() {
           <RichEditor
             value={draftContent}
             editable={true}
+            uploadFolder={`pages/${page.id}`}   // ✅ ini penting biar rapi
             onChangeHtml={(nextHtml) => {
               setDraftContent(nextHtml);
               setDirty(true);
             }}
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
+
         ) : (
 <div
   className="
