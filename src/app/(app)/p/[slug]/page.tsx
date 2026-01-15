@@ -17,26 +17,38 @@ type PageRow = {
   title: string;
   slug: string;
   type: PageType;
-  content_md?: string | null;     // HTML notes
+  icon?: string | null;          // ✅ NEW
+  content_md?: string | null;    // HTML notes
   status?: string | null;
-  external_url?: string | null;   // ✅ link url
+  external_url?: string | null;  // link url
 };
 
 function toEmbeddableGoogleUrl(url: string) {
-  // Sheets
-  if (url.includes("docs.google.com/spreadsheets")) {
-    return url.replace(/\/edit.*$/, "/preview");
-  }
-  // Docs
-  if (url.includes("docs.google.com/document")) {
-    return url.replace(/\/edit.*$/, "/preview");
-  }
-  // Slides
-  if (url.includes("docs.google.com/presentation")) {
-    return url.replace(/\/edit.*$/, "/preview");
-  }
-  return url; // fallback
+  if (url.includes("docs.google.com/spreadsheets")) return url.replace(/\/edit.*$/, "/preview");
+  if (url.includes("docs.google.com/document")) return url.replace(/\/edit.*$/, "/preview");
+  if (url.includes("docs.google.com/presentation")) return url.replace(/\/edit.*$/, "/preview");
+  return url;
 }
+
+function defaultIconByType(t: PageType) {
+  if (t === "folder") return "📁";
+  if (t === "sop") return "📜";
+  if (t === "calendar") return "🗓️";
+  if (t === "report") return "📊";
+  if (t === "link") return "🔗";
+  return "📄";
+}
+
+// Simple inline icon preset (feel like Coda)
+const ICON_PRESETS: Record<PageType | "general", string[]> = {
+  folder: ["📁", "📂", "🗂️", "🧩", "🗃️", "🧠", "🧱", "⭐"],
+  doc: ["📄", "📝", "📌", "🧾", "📎", "✅", "⭐", "💡"],
+  sop: ["📜", "✅", "🧾", "🧠", "🔒", "📌", "🧪", "⚙️"],
+  report: ["📊", "📈", "📉", "🧮", "📑", "🗒️", "🎯", "⭐"],
+  calendar: ["🗓️", "📅", "⏰", "🕒", "🔔", "📍", "✅", "⭐"],
+  link: ["🔗", "🌐", "📎", "🧷", "🧭", "🪝", "⭐", "💡"],
+  general: ["⭐", "🔥", "💡", "🎯", "🧰", "🧪", "🚀", "📌", "🧷", "✅"],
+};
 
 export default function PageView() {
   const params = useParams<{ slug: string }>();
@@ -49,7 +61,7 @@ export default function PageView() {
   const [loading, setLoading] = useState(true);
 
   const [mode, setMode] = useState<"edit" | "preview">("preview");
-  const [draftContent, setDraftContent] = useState<string>(""); // HTML notes
+  const [draftContent, setDraftContent] = useState<string>("");
   const [dirty, setDirty] = useState(false);
 
   const [saving, setSaving] = useState(false);
@@ -57,6 +69,10 @@ export default function PageView() {
   const timerRef = useRef<number | null>(null);
 
   const allowEdit = canEdit(role);
+
+  // icon picker state
+  const [iconOpen, setIconOpen] = useState(false);
+  const [customIcon, setCustomIcon] = useState("");
 
   function flash(msg: string) {
     setSaveMsg(msg);
@@ -92,7 +108,7 @@ export default function PageView() {
 
       const { data, error } = await supabase
         .from("pages")
-        .select("id,title,slug,type,content_md,status,external_url")
+        .select("id,title,slug,type,icon,content_md,status,external_url") // ✅ icon added
         .eq("slug", slug)
         .maybeSingle();
 
@@ -136,10 +152,7 @@ export default function PageView() {
     setSaving(true);
     setSaveMsg(null);
 
-    const { error } = await supabase
-      .from("pages")
-      .update({ content_md: draftContent })
-      .eq("id", page.id);
+    const { error } = await supabase.from("pages").update({ content_md: draftContent }).eq("id", page.id);
 
     setSaving(false);
 
@@ -153,7 +166,22 @@ export default function PageView() {
     flash("Saved ✅");
   }
 
-  // ✅ biar loading tidak putih (tetap gelap)
+  async function updateIcon(next: string | null) {
+    if (!page) return;
+    if (!allowEdit) return;
+
+    const { error } = await supabase.from("pages").update({ icon: next }).eq("id", page.id);
+
+    if (error) {
+      flash("Gagal update icon");
+      return;
+    }
+
+    setPage((p) => (p ? { ...p, icon: next } : p));
+    flash("Icon updated ✅");
+  }
+
+  // loading states
   if (loading) {
     return <div className="min-h-screen bg-slate-950 text-white/60 p-6">Loading...</div>;
   }
@@ -166,20 +194,100 @@ export default function PageView() {
   const url = (page.external_url ?? "").trim();
   const embedUrl = url ? toEmbeddableGoogleUrl(url) : "";
 
+  const shownIcon = (page.icon?.trim() ? page.icon : defaultIconByType(page.type)) as string;
+  const presetIcons = [...(ICON_PRESETS[page.type] ?? []), ...ICON_PRESETS.general];
+
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-5">
-        <div className="min-w-0">
-          <div className="text-3xl font-bold text-white truncate">{page.title}</div>
-          <div className="text-sm text-white/55 mt-1">
-            {isFolder ? "Folder" : isLink ? "Google Link" : "Page"} •{" "}
-            {page.status === "draft" ? "Draft" : "Published"} •{" "}
-            {dirty ? (
-              <span className="text-yellow-300/90">Unsaved</span>
+        {/* Left: icon + title */}
+        <div className="min-w-0 flex items-start gap-3">
+          {/* Icon */}
+          <div className="relative shrink-0">
+            {allowEdit ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIconOpen((v) => !v)}
+                  className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 grid place-items-center text-2xl"
+                  title="Ubah icon"
+                >
+                  {shownIcon}
+                </button>
+
+                {iconOpen && (
+                  <div className="absolute z-50 mt-2 w-72 rounded-2xl border border-white/10 bg-slate-950 shadow-xl p-3">
+                    <div className="text-xs text-white/60 mb-2">Pilih icon</div>
+
+                    <div className="grid grid-cols-8 gap-1">
+                      {presetIcons.map((ic) => (
+                        <button
+                          key={ic}
+                          type="button"
+                          className="h-9 w-9 rounded-lg hover:bg-white/10 grid place-items-center text-lg"
+                          onClick={() => {
+                            void updateIcon(ic);
+                            setIconOpen(false);
+                          }}
+                        >
+                          {ic}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="h-px bg-white/10 my-3" />
+
+                    <div className="text-xs text-white/60 mb-2">Custom (paste emoji sendiri)</div>
+                    <div className="flex gap-2">
+                      <input
+                        value={customIcon}
+                        onChange={(e) => setCustomIcon(e.target.value)}
+                        placeholder="contoh: 🧾"
+                        className="flex-1 rounded-md bg-white/5 border border-white/10 px-2 py-2 text-sm text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        className="px-3 py-2 rounded-md text-sm border border-white/10 hover:bg-white/10"
+                        onClick={() => {
+                          const ic = customIcon.trim();
+                          if (ic) void updateIcon(ic);
+                          setCustomIcon("");
+                          setIconOpen(false);
+                        }}
+                      >
+                        Set
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mt-3 text-xs text-white/60 hover:text-white"
+                      onClick={() => {
+                        void updateIcon(null);
+                        setIconOpen(false);
+                      }}
+                    >
+                      Hapus icon
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
-              <span className="text-emerald-300/90">Saved</span>
+              <div className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 grid place-items-center text-2xl">
+                {shownIcon}
+              </div>
             )}
+          </div>
+
+          {/* Title + meta */}
+          <div className="min-w-0">
+            <div className="text-3xl font-bold text-white truncate">{page.title}</div>
+            <div className="text-sm text-white/55 mt-1">
+              {isFolder ? "Folder" : isLink ? "Google Link" : "Page"} •{" "}
+              {page.status === "draft" ? "Draft" : "Published"} •{" "}
+              {dirty ? <span className="text-yellow-300/90">Unsaved</span> : <span className="text-emerald-300/90">Saved</span>}
+            </div>
           </div>
         </div>
 
@@ -229,7 +337,7 @@ export default function PageView() {
         </>
       )}
 
-      {/* ✅ Coda-like Link Preview Card */}
+      {/* Link Preview Card */}
       {isLink && (
         <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 mb-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
           <div className="flex items-center justify-between gap-3 mb-3">
@@ -251,53 +359,44 @@ export default function PageView() {
 
           {embedUrl ? (
             <div className="rounded-xl overflow-hidden border border-white/10 bg-black">
-              <iframe
-                src={embedUrl}
-                className="w-full h-[70vh]"
-                allow="clipboard-read; clipboard-write"
-              />
+              <iframe src={embedUrl} className="w-full h-[70vh]" allow="clipboard-read; clipboard-write" />
             </div>
           ) : (
-            <div className="text-sm text-white/60">
-              Link belum ada atau format link belum didukung untuk embed.
-            </div>
+            <div className="text-sm text-white/60">Link belum ada atau format link belum didukung untuk embed.</div>
           )}
         </div>
       )}
 
       {/* Notes / Content */}
-      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
-        <div className="text-sm font-semibold text-white/85 mb-3">
-          {isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}
-        </div>
+      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] min-w-0">
+        <div className="text-sm font-semibold text-white/85 mb-3">{isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}</div>
 
         {allowEdit && mode === "edit" ? (
           <RichEditor
             value={draftContent}
             editable={true}
-            uploadFolder={`pages/${page.id}`}   // ✅ ini penting biar rapi
+            uploadFolder={`pages/${page.id}`}
             onChangeHtml={(nextHtml) => {
               setDraftContent(nextHtml);
               setDirty(true);
             }}
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
-
         ) : (
-<div
-  className="
-    max-w-full min-w-0
-    whitespace-pre-wrap break-words [overflow-wrap:anywhere]
-    [&_pre]:whitespace-pre-wrap
-    [&_pre]:break-words
-    [&_pre]:[overflow-wrap:anywhere]
-    [&_pre]:overflow-x-auto
-    [&_code]:break-words
-    [&_a]:break-all
-  "
->
-  <MarkdownView html={draftContent} />
-</div>
+          <div
+            className="
+              max-w-full min-w-0
+              whitespace-pre-wrap break-words [overflow-wrap:anywhere]
+              [&_pre]:whitespace-pre-wrap
+              [&_pre]:break-words
+              [&_pre]:[overflow-wrap:anywhere]
+              [&_pre]:overflow-x-auto
+              [&_code]:break-words
+              [&_a]:break-all
+            "
+          >
+            <MarkdownView html={draftContent} />
+          </div>
         )}
       </div>
     </div>

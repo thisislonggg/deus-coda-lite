@@ -17,6 +17,7 @@ type PageRow = {
   slug: string;
   type: PageType;
   parent_id: string | null;
+  icon?: string | null; // ✅ custom emoji/icon
   status?: string | null;
   pinned?: boolean | null;
   external_url?: string | null;
@@ -32,23 +33,20 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-function typeEmoji(t: PageType) {
-  switch (t) {
-    case "folder":
-      return "📁";
-    case "doc":
-      return "📄";
-    case "sop":
-      return "📘";
-    case "report":
-      return "📊";
-    case "calendar":
-      return "📅";
-    case "link":
-      return "🔗";
-    default:
-      return "📄";
-  }
+/** ✅ fallback icon kalau page.icon belum ada */
+function defaultIconByType(t: PageType) {
+  if (t === "folder") return "📁";
+  if (t === "sop") return "📘";
+  if (t === "calendar") return "📅";
+  if (t === "report") return "📊";
+  if (t === "link") return "🔗";
+  return "📄";
+}
+
+/** ✅ icon yang dipakai UI: custom icon (DB) -> fallback by type */
+function getNodeIcon(icon: string | null | undefined, type: PageType) {
+  const trimmed = (icon ?? "").trim();
+  return trimmed ? trimmed : defaultIconByType(type);
 }
 
 function kindMeta(kind: CreateKind) {
@@ -195,7 +193,7 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
   async function loadPages() {
     const q = supabase
       .from("pages")
-      .select("id,title,slug,parent_id,type,status,external_url")
+      .select("id,title,slug,parent_id,type,icon,status,external_url")
       .order("title", { ascending: true });
 
     const { data, error } = await q;
@@ -358,7 +356,6 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
 
     const isFolder = createType === "folder";
     const finalType: PageType = isFolder ? "folder" : (createType as PageType);
-
 
     const insertPayload: any = {
       title: t,
@@ -610,7 +607,7 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
                   }}
                   title={p.title}
                 >
-                  <span className="text-white/70">{typeEmoji(p.type)}</span>
+                  <span className="text-white/70">{getNodeIcon(p.icon, p.type)}</span>
                   <span className="flex-1 truncate">{p.title}</span>
                   <span className="text-xs text-white/40">📌</span>
                 </button>
@@ -779,8 +776,9 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
             }}
           >
             <div className="px-3 py-2 border-b border-white/10">
-              <div className="text-xs text-white/60 truncate">
-                {typeEmoji(ctxTarget.node.type)} {ctxTarget.node.title}
+              <div className="flex items-center gap-1.5 text-xs text-white/60 min-w-0">
+                <span className="shrink-0">{getNodeIcon(ctxTarget.node.icon, ctxTarget.node.type)}</span>
+                <span className="truncate">{ctxTarget.node.title}</span>
               </div>
             </div>
 
@@ -825,12 +823,7 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
               )}
 
               {canEdit(role) && (
-                <CtxItem
-                  label="Rename"
-                  subLabel="Ubah nama"
-                  icon="✏️"
-                  onClick={() => startRename(ctxTarget.node.title)}
-                />
+                <CtxItem label="Rename" subLabel="Ubah nama" icon="✏️" onClick={() => startRename(ctxTarget.node.title)} />
               )}
 
               <CtxItem
@@ -1115,7 +1108,7 @@ function TreeList({
         const isActive = activeSlug === n.slug;
 
         const isFolder = n.type === "folder";
-        const icon = typeEmoji(n.type);
+        const icon = getNodeIcon(n.icon, n.type);
 
         return (
           <div key={n.id}>
@@ -1156,6 +1149,7 @@ function TreeList({
                 <span className="h-5 w-5 grid place-items-center text-white/40 text-xs">•</span>
               )}
 
+              {/* ✅ icon sekarang ikut DB */}
               <span className="text-white/70">{icon}</span>
 
               <button
