@@ -636,11 +636,9 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
       </div>
 
       {/* Create Modal */}
-      {isOpen && canEdit(role) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => !creating && setIsOpen(false)} />
+            {/* Create Modal */}
+      <AddNewModal open={isOpen && canEdit(role)} onClose={() => !creating && setIsOpen(false)}>
 
-          <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
             <div className="p-4 border-b border-white/10">
               <div className="text-sm font-semibold">Add New</div>
               <div className="text-xs text-white/60 mt-1">{createParentId ? "Create inside folder" : "Create at root"}</div>
@@ -713,11 +711,9 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
                 {creating ? "Creating..." : "Create"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </AddNewModal>
 
-      {/* Delete Modal */}
+{/* Delete Modal */}
       {!!deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => !deleting && setDeleteId(null)} />
@@ -1261,3 +1257,25 @@ function CtxItem({
     </button>
   );
 }
+
+
+function AddNewModal({ open, onClose, children }: any) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+  if (!open || !mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[99999]">
+      {/* backdrop */}
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+
+      {/* modal */}
+      <div className="relative z-[100000] flex min-h-screen items-center justify-center p-4">
+        <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-neutral-950 shadow-2xl">{children}</div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
