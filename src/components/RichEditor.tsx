@@ -83,28 +83,6 @@ export default function RichEditor({
 
         <button
           type="button"
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("bulletList") ? "bg-white/10" : ""
-          }`}
-        >
-          • List
-        </button>
-
-        <button
-          type="button"
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("orderedList") ? "bg-white/10" : ""
-          }`}
-        >
-          1. List
-        </button>
-
-        <div className="w-px h-6 bg-white/10 mx-1" />
-
-        <button
-          type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
             editor.isActive("heading", { level: 1 }) ? "bg-white/10" : ""
