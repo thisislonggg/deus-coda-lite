@@ -57,6 +57,16 @@ export default function LoginPage() {
 
           {err && <div className="text-sm text-red-300">{err}</div>}
 
+          {/* TAMBAHAN: Link Forgot Password */}
+          <div className="text-right">
+            <Link 
+              href="/forgot-password" 
+              className="text-xs text-yellow-300 hover:underline"
+            >
+              Lupa password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
