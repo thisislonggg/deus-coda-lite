@@ -18,28 +18,20 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              (function() {
+              (function () {
                 try {
-                  var savedTheme = localStorage.getItem('theme');
-                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  
-                  var theme = savedTheme || (prefersDark ? 'dark' : 'light');
-                  
+                  const saved = localStorage.getItem("theme");
+                  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                  const theme = saved || (prefersDark ? "dark" : "light");
                   document.documentElement.classList.add(theme);
-                  localStorage.setItem('theme', theme);
-                } catch(e) {}
+                  localStorage.setItem("theme", theme);
+                } catch {}
               })();
             `,
           }}
         />
       </head>
-      <body
-        className="
-          bg-[var(--color-bg)]
-          text-[var(--color-text)]
-          transition-colors
-        "
-      >
+      <body className="bg-[var(--color-bg)] text-[var(--color-text)] transition-colors">
         {children}
       </body>
     </html>

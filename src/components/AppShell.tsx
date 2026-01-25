@@ -2,35 +2,32 @@
 
 import { useEffect, useState } from "react";
 import SidebarTree from "@/components/SidebarTree";
+import { useSidebar } from "@/context/SidebarContext";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // mount guard (hindari hydration mismatch)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { isDesktopOpen, toggleDesktopSidebar } = useSidebar();
 
-  // ESC close
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") setMobileOpen(false);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // resize close
   useEffect(() => {
     function onResize() {
-      if (window.innerWidth >= 768) setOpen(false);
+      if (window.innerWidth >= 768) setMobileOpen(false);
     }
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // theme toggle (GLOBAL)
   function toggleTheme() {
     const html = document.documentElement;
     const next = html.classList.contains("dark") ? "light" : "dark";
@@ -42,89 +39,78 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] transition-colors">
-      {/* TOP BAR (mobile only) */}
-      <div className="md:hidden sticky top-0 z-[60] border-b border-black/10 dark:border-[var(--border-main)] bg-[var(--color-bg)]/80 backdrop-blur">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      {/* ================= MOBILE TOP BAR ================= */}
+      <div className="md:hidden sticky top-0 z-50 border-b border-[var(--border-main)] bg-[var(--color-bg)]">
         <div className="h-14 px-4 flex items-center justify-between">
+          {/* Left */}
           <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 text-[var(--color-text)]"
+            onClick={() => setMobileOpen(true)}
+            className="h-9 w-9 flex items-center justify-center rounded-md border border-[var(--border-main)]"
+            aria-label="Open menu"
           >
-            <span className="text-lg leading-none">☰</span>
-            <span className="text-sm font-semibold">Menu</span>
+            ☰
           </button>
 
+          {/* Right */}
           <div className="flex items-center gap-3">
-            {/* THEME SWITCH (mobile) */}
             <button
-              type="button"
               onClick={toggleTheme}
-              className="px-2 py-1 rounded-md border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 text-sm text-[var(--color-text)]"
-              title="Toggle theme"
+              className="h-9 px-2 rounded-md border border-[var(--border-main)] text-sm"
+              aria-label="Toggle theme"
             >
               🌙 / ☀️
             </button>
-
-            <div className="text-sm text-[var(--color-muted)] truncate max-w-[40vw]">
-              Deus Code Lite
-            </div>
+            <span className="text-sm font-medium text-[var(--color-muted)]">
+              Deus Code
+            </span>
           </div>
         </div>
       </div>
 
+      {/* ================= MAIN LAYOUT ================= */}
       <div className="flex">
         {/* DESKTOP SIDEBAR */}
-        <div className="hidden md:block">
-          <SidebarTree showDrafts />
-        </div>
-
-        {/* MOBILE DRAWER SIDEBAR */}
-        {open && (
-          <>
-            <div
-              className="fixed inset-0 z-[70] bg-black/60"
-              onClick={() => setOpen(false)}
-            />
-
-            <div className="fixed z-[80] inset-y-0 left-0 w-[320px] max-w-[85vw]">
-              <div className="h-full bg-[var(--color-bg)]">
-                <div className="md:hidden flex items-center justify-between px-3 py-3 border-b border-black/10 dark:border-[var(--border-main)]">
-                  <div className="text-sm font-semibold text-[var(--color-muted)]">
-                    Navigation
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* THEME SWITCH (drawer) */}
-                    <button
-                      type="button"
-                      onClick={toggleTheme}
-                      className="px-2 py-1 rounded-md border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 text-sm text-[var(--color-text)]"
-                    >
-                      🌙 / ☀️
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setOpen(false)}
-                      className="px-2 py-1 rounded-md border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-white/10 text-sm text-[var(--color-text)]"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-
-                <SidebarTree showDrafts />
-              </div>
-            </div>
-          </>
+        {isDesktopOpen && (
+          <aside className="hidden md:block w-[320px] h-screen border-r border-[var(--border-main)]">
+            <SidebarTree />
+          </aside>
         )}
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 min-w-0">
-          <div className="px-4 md:px-6 py-4 md:py-6">{children}</div>
+        <main className="flex-1 min-w-0 relative">
+          {/* DESKTOP CONTENT HEADER */}
+          <div className="hidden md:flex items-center gap-3 sticky top-0 z-30 border-b border-[var(--border-main)] bg-[var(--color-bg)] px-4 py-3">
+            <button
+              type="button"
+              onClick={toggleDesktopSidebar}
+              className="h-10 w-10 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] flex items-center justify-center text-xl shrink-0"
+              title={isDesktopOpen ? "Tutup Menu" : "Buka Menu"}
+            >
+              {isDesktopOpen ? "←" : "☰"}
+            </button>
+            <div className="flex-1 min-w-0" />
+          </div>
+
+          {/* CONTENT WRAPPER */}
+          <div className="px-4 md:px-6 py-4 md:py-6">
+            {children}
+          </div>
         </main>
       </div>
+
+      {/* ================= MOBILE DRAWER ================= */}
+      {mobileOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-60 w-[320px] bg-[var(--color-bg)] border-r border-[var(--border-main)]">
+            <SidebarTree />
+          </div>
+        </>
+      )}
     </div>
   );
 }

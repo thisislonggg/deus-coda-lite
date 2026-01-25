@@ -12,16 +12,20 @@
   --sidebar-text: #000000; /* Hitam untuk light mode */
   --sidebar-text-muted: #000000; /* Hitam juga untuk light mode (tidak pucat) */
   --sidebar-border: rgba(0, 0, 0, 0.12);
-  --sidebar-hover: rgba(0, 0, 0, 0.05);
+  --sidebar-hover: rgba(253, 15, 15, 0.05);
   --sidebar-active: rgba(241, 196, 15, 0.14);
   
   /* Main content variables - Light mode */
   --color-bg: #ffffff;
   --color-text: #000000;
-  --color-muted: #666666;
-  --border-main: rgba(0, 0, 0, 0.12);
+  --color-muted: #000000;
+  --border-main: 000000;
   --bg-card: #f8f9fa;
   --bg-surface: #ffffff;
+  --bg-popup: #ffffff;
+  --popup-text: #0f172a;
+  --bg-initial: #0b1220;
+  --popup-initial: #e5e7eb;
 }
 
 /* ===============================
@@ -43,6 +47,10 @@ html.dark{
   --border-main: rgba(255, 255, 255, 0.12);
   --bg-card: #0b1220;
   --bg-surface: #020617;
+   --bg-popup: #0b1220;
+  --popup-text: #e5e7eb;
+     --bg-initial: #e5e7eb;
+  --popup-initial: #0b1220;
 }
 
 /* ===============================

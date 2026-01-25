@@ -162,6 +162,7 @@ export default function PageView() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [themeChangeCount, setThemeChangeCount] = useState(0);
 
+
   function flash(msg: string) {
     setSaveMsg(msg);
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -405,7 +406,6 @@ export default function PageView() {
   // Toggle auto-save
   const toggleAutoSave = () => {
     setAutoSaveEnabled(!autoSaveEnabled);
-    flash(`Auto-save ${!autoSaveEnabled ? 'diaktifkan' : 'dinonaktifkan'}`);
   };
 
   // loading states
@@ -425,9 +425,85 @@ export default function PageView() {
   const presetIcons = [...(ICON_PRESETS[page.type] ?? []), ...ICON_PRESETS.general];
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-5">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6 relative">
+
+      {/* ======================================================
+          ✅ MOBILE HEADER (SEKARANG BENAR-BENAR MUNCUL)
+      ====================================================== */}
+      <div className="md:hidden mb-5 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] flex items-center justify-center text-xl shrink-0">
+            {shownIcon}
+          </div>
+          <div className="min-w-0">
+            <div className="text-lg font-semibold leading-tight truncate">
+              {page.title}
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--color-muted)]">
+              <span>{isFolder ? "Folder" : "Page"} · {page.status}</span>
+              <span className={`px-2 py-0.5 rounded-full ${dirty ? "bg-yellow-500/20 text-yellow-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+                {dirty ? "Unsaved" : "Saved"}
+              </span>
+              {lastSaveTime && (
+                <span>Terakhir: {lastSaveTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {allowEdit && (
+          <>
+            <div className="flex items-center gap-1 mr-2">
+              <button
+                type="button"
+                onClick={toggleAutoSave}
+                className={`px-2 py-1 rounded-md text-xs border ${autoSaveEnabled ? 'bg-green-500/20 border-green-500/30 text-green-600 dark:text-green-300' : 'bg-gray-500/20 border-gray-500/30 text-gray-600 dark:text-gray-300'}`}
+                title={autoSaveEnabled ? "Auto-save aktif" : "Auto-save nonaktif"}
+              >
+                {autoSaveEnabled ? "🔄 Auto" : "⏸️ Auto"}
+              </button>
+              <span className="text-xs text-[var(--color-muted)]">{autoSaveEnabled ? "ON" : "OFF"}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={`px-3 py-2 rounded-md text-sm border transition ${
+                mode === "preview" ? "bg-[var(--sidebar-hover)] border-[var(--border-main)]" : "border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
+              }`}
+              onClick={() => setMode("preview")}
+            >
+              Preview
+            </button>
+
+            <button
+              type="button"
+              className={`px-3 py-2 rounded-md text-sm border transition ${
+                mode === "edit" ? "bg-[var(--sidebar-hover)] border-[var(--border-main)]" : "border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
+              }`}
+              onClick={() => setMode("edit")}
+            >
+              Edit
+            </button>
+            </div>
+
+            <button
+              onClick={saveContent}
+              disabled={!dirty || saving}
+              className="w-full py-3 rounded-xl font-semibold"
+              style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}
+            >
+              {saving ? "Saving…" : "Save Now"}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* ======================================================
+          DESKTOP HEADER (TIDAK DIUBAH)
+      ====================================================== */}
+      <div className="hidden md:flex items-start justify-between gap-3 mb-5">
+  
         {/* Left: icon + title */}
         <div className="min-w-0 flex items-start gap-3">
           {/* Icon */}

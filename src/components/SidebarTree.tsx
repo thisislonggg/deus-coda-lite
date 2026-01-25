@@ -122,8 +122,18 @@ async function safeCopy(text: string) {
     ta.remove();
   }
 }
+
 function TreeList({
-  nodes, expanded, onToggle, activeSlug, level, canEdit, onAdd, onDelete, onNavigate, onContextMenuNode,
+  nodes,
+  expanded,
+  onToggle,
+  activeSlug,
+  level,
+  canEdit,
+  onAdd,
+  onDelete,
+  onNavigate,
+  onContextMenuNode,
 }: {
   nodes: PageNode[];
   expanded: Record<string, boolean>;
@@ -257,6 +267,7 @@ function CtxItem({ label, subLabel, icon, danger, onClick }: { label: string; su
     </button>
   );
 }
+
 function AddNewModal({ open, onClose, children }: any) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -276,28 +287,29 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
   const supabase = useMemo(() => createSupabaseBrowser(), []);
   const router = useRouter();
   const pathname = usePathname();
+  
   // Tambahkan di dalam komponen SidebarTree, setelah state lainnya
-const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-useEffect(() => {
-  // Fungsi untuk mengecek apakah tema dark
-  const checkDarkMode = () => {
-    const isDark = document.documentElement.classList.contains('dark');
-    setIsDarkMode(isDark);
-  };
+  useEffect(() => {
+    // Fungsi untuk mengecek apakah tema dark
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+    };
 
-  // Jalankan sekali di mount
-  checkDarkMode();
+    // Jalankan sekali di mount
+    checkDarkMode();
 
-  // Observasi perubahan class di elemen html
-  const observer = new MutationObserver(checkDarkMode);
-  observer.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
+    // Observasi perubahan class di elemen html
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
 
-  return () => observer.disconnect();
-}, []);
+    return () => observer.disconnect();
+  }, []);
 
   const activeSlug = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -574,321 +586,377 @@ useEffect(() => {
   function openNewTab(slug: string) {
     window.open(pageUrl(slug), "_blank", "noopener,noreferrer");
   }
+const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-return (
-  <aside className="shrink-0 w-[320px] overflow-hidden border-r h-screen"
-    style={{
-      borderColor: 'var(--sidebar-border)',
-      background: 'var(--sidebar-bg)',
-      zIndex: 10,
-      top: 0,
-    }}>
-      <div className="sticky top-0 z-20 p-4 border-b backdrop-blur" style={{ 
-        borderColor: 'var(--sidebar-border)', 
-        backgroundColor: 'rgba(2,6,23,0.70) dark:rgba(2,6,23,0.70)' 
+  return (
+    <aside className="shrink-0 w-[320px] overflow-hidden border-r h-screen"
+      style={{
+        borderColor: 'var(--sidebar-border)',
+        background: 'var(--sidebar-bg)',
+        zIndex: 10,
+        top: 0,
       }}>
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 flex items-center gap-3">
-<Link href="/p/deus-code" className="shrink-0">
-  {isDarkMode ? (
-    <Image 
-      src="/logo-deus.webp" 
-      alt="Deus Code" 
-      width={72} 
-      height={72} 
-      priority 
-    />
-  ) : (
-    <Image 
-      src="/logo-deus-dark.webp" 
-      alt="Deus Code" 
-      width={72} 
-      height={72} 
-      priority 
-    />
-  )}
-</Link>
-            <div className="min-w-0">
-              <div className="text-sm text-[var(--sidebar-text)] leading-tight">Halo,</div>
-              <div className="text-base font-semibold text-[var(--sidebar-text)] truncate max-w-[180px]">{myName ?? "User"}</div>
+        <div className="sticky top-0 z-20 p-4  bg-[var(--sidebar-bg)]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-center gap-3">
+              <Link href="/p/deus-code" className="shrink-0">
+                {isDarkMode ? (
+                  <Image 
+                    src="/logo-deus.webp" 
+                    alt="Deus Code" 
+                    width={72} 
+                    height={72} 
+                    priority 
+                  />
+                ) : (
+                  <Image 
+                    src="/logo-deus-dark.webp" 
+                    alt="Deus Code" 
+                    width={72} 
+                    height={72} 
+                    priority 
+                  />
+                )}
+              </Link>
+          <div className="min-w-0 leading-tight ml-2.5">
+            <div className="text-xs text-[var(--sidebar-text-muted)]">
+              Halo,
+            </div>
+            <div
+              className="text-sm font-semibold text-[var(--sidebar-text)] break-words"
+              style={{ maxWidth: 200 }}
+              title={myName ?? "User"}
+            >
+              {myName ?? "User"}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/profile" className="text-sm px-2.5 py-1.5 rounded-md border border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)] transition text-[var(--sidebar-text)]">Profile</Link>
-            <button type="button" onClick={onLogout} className="text-sm px-2.5 py-1.5 rounded-md border border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover)] text-[var(--sidebar-text)]">Logout</button>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex-1">
-            <input 
-              value={query} 
-              onChange={(e) => setQuery(e.target.value)} 
-              placeholder="Search pages..." 
-              className="w-full rounded-md px-3 py-2 text-sm outline-none bg-[var(--sidebar-hover)] border border-[var(--sidebar-border)] placeholder:text-[var(--sidebar-text-muted)] focus:ring-2 text-[var(--sidebar-text)]" 
-              style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }} 
-            />
-          </div>
-          {canEdit(role) && (<div className="shrink-0"><AddMenu onCreate={(kind) => openCreate(null, kind)} /></div>)}
-        </div>
-      </div>
 
-      <div className="h-[calc(100vh-132px)] overflow-y-auto px-3 py-3" style={{ color: 'var(--sidebar-text)' }}>
-        {!!pinnedPages.length && (
-          <div className="mb-3">
-            <div className="text-xs text-[var(--sidebar-text)] px-2 mb-2 flex items-center gap-2"><span>⭐ Pinned</span></div>
-            <div className="space-y-1">
-              {pinnedPages.map((p) => (
-                <button key={p.id} type="button"
-                  onClick={() => { router.push(`/p/${p.slug}`); router.refresh(); }}
-                  onContextMenu={(e) => { const n: PageNode = { ...(p as any), children: [] }; openContextMenu(e, n); }}
-                  className={[
-                    "w-full text-left rounded-lg px-2.5 py-2 text-sm transition border flex items-center gap-2", 
-                    activeSlug === p.slug 
-                      ? "text-[var(--sidebar-text)] border-[var(--sidebar-border)]" 
-                      : "text-[var(--sidebar-text)] opacity-85 border-transparent hover:bg-[var(--sidebar-hover)]"
-                  ].join(" ")}
-                  style={{ backgroundColor: activeSlug === p.slug ? 'var(--sidebar-active)' : undefined }}
-                  title={p.title}>
-                  <span className="text-[var(--sidebar-text)] opacity-70">{getNodeIcon(p.icon, p.type)}</span>
-                  <span className="flex-1 truncate">{p.title}</span>
-                  <span className="text-xs text-[var(--sidebar-text)]">📌</span>
-                </button>
-              ))}
+
+    <div className="relative shrink-0 relative shrink-0 ml-16.5">
+  <button
+    type="button"
+    onClick={() => setUserMenuOpen(v => !v)}
+    className="h-9 w-9 rounded-full border border-[var(--sidebar-border)] bg-[var(--sidebar-hover)] flex items-center justify-center text-sm font-semibold text-[var(--sidebar-text)]"
+      style={{
+    backgroundColor: "var(--bg-initial)",
+    color: "var(--popup-initial)",
+  }}
+    title="User menu"
+  >
+    {(myName ?? "U").charAt(0).toUpperCase()}
+  </button>
+
+  {userMenuOpen && (
+    <>
+      {/* click outside */}
+      <div
+        className="fixed inset-0 z-40"
+        onClick={() => setUserMenuOpen(false)}
+      />
+
+      {/* dropdown */}
+      <div
+  className="absolute right-0 mt-2 w-40 rounded-xl border border-[var(--sidebar-border)] shadow-xl"
+  style={{
+    backgroundColor: "var(--bg-popup)",
+    color: "var(--popup-text)",
+  }}
+>
+        <Link
+          href="/profile"
+          className="block px-4 py-2 text-sm hover:bg-[var(--sidebar-hover)] text-[var(--sidebar-text)]"
+          onClick={() => setUserMenuOpen(false)}
+        >
+          Profile
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => {
+            setUserMenuOpen(false);
+            onLogout();
+          }}
+          className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-[var(--sidebar-hover)]"
+        >
+          Logout
+        </button>
+      </div>
+    </>
+  )}
+</div>
+
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <div className="flex-1">
+              <input 
+                value={query} 
+                onChange={(e) => setQuery(e.target.value)} 
+                placeholder="Search pages..." 
+                className="w-full rounded-md px-3 py-2 text-sm outline-none bg-[var(--sidebar-hover)] border border-[var(--sidebar-border)] placeholder:text-[var(--sidebar-text-muted)] focus:ring-2 text-[var(--sidebar-text)]" 
+                style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.12)" }} 
+              />
+            </div>
+            {canEdit(role) && (<div className="shrink-0"><AddMenu onCreate={(kind) => openCreate(null, kind)} /></div>)}
+          </div>
+        </div>
+
+        <div className="h-[calc(100vh-132px)] overflow-y-auto px-3 py-3" style={{ color: 'var(--sidebar-text)' }}>
+          {!!pinnedPages.length && (
+            <div className="mb-3">
+              <div className="text-xs text-[var(--sidebar-text)] px-2 mb-2 flex items-center gap-2"><span>⭐ Pinned</span></div>
+              <div className="space-y-1">
+                {pinnedPages.map((p) => (
+                  <button key={p.id} type="button"
+                    onClick={() => { router.push(`/p/${p.slug}`); router.refresh(); }}
+                    onContextMenu={(e) => { const n: PageNode = { ...(p as any), children: [] }; openContextMenu(e, n); }}
+                    className={[
+                      "w-full text-left rounded-lg px-2.5 py-2 text-sm transition border flex items-center gap-2", 
+                      activeSlug === p.slug 
+                        ? "text-[var(--sidebar-text)] border-[var(--sidebar-border)]" 
+                        : "text-[var(--sidebar-text)] opacity-85 border-transparent hover:bg-[var(--sidebar-hover)]"
+                    ].join(" ")}
+                    style={{ backgroundColor: activeSlug === p.slug ? 'var(--sidebar-active)' : undefined }}
+                    title={p.title}>
+                    <span className="text-[var(--sidebar-text)] opacity-70">{getNodeIcon(p.icon, p.type)}</span>
+                    <span className="flex-1 truncate">{p.title}</span>
+                    <span className="text-xs text-[var(--sidebar-text)]">📌</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="text-xs text-[var(--sidebar-text)] px-2 mb-2">Pages</div>
+
+          <TreeList
+            nodes={filteredRoots}
+            expanded={expanded}
+            onToggle={toggle}
+            activeSlug={activeSlug}
+            level={0}
+            canEdit={canEdit(role)}
+            onAdd={(parentId) => openCreate(parentId)}
+            onDelete={(node) => openDelete(node)}
+            onNavigate={(slug) => { router.push(`/p/${slug}`); router.refresh(); }}
+            onContextMenuNode={openContextMenu}
+          />
+        </div>
+
+        <AddNewModal open={isOpen && canEdit(role)} onClose={() => !creating && setIsOpen(false)}>
+          <div className="p-4 border-b border-white/10">
+            <div className="text-sm font-semibold">Add New</div>
+            <div className="text-xs text-white/60 mt-1">{createParentId ? "Create inside folder" : "Create at root"}</div>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {(["sop", "doc", "report", "calendar", "folder", "link"] as CreateKind[]).map((k) => {
+                const m = kindMeta(k);
+                const active = createType === k;
+                return (
+                  <button key={k} type="button" onClick={() => setCreateType(k)}
+                    className={`rounded-lg px-3 py-3 text-sm border text-left flex items-center gap-3 ${active ? "border-yellow-400/60" : "border-white/10"}`}
+                    style={{ backgroundColor: active ? "rgba(241,196,15,0.12)" : "rgba(255,255,255,0.04)" }}>
+                    <span className="text-lg">{m.emoji}</span>
+                    <span className="min-w-0">
+                      <div className="font-semibold leading-tight">{m.label}</div>
+                      <div className="text-xs text-white/60 truncate">{m.desc}</div>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <input value={createTitle} onChange={(e) => setCreateTitle(e.target.value)}
+              placeholder={createType === "folder" ? "Nama folder..." : "Judul page..."}
+              className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
+              style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }} />
+            {createType === "link" && (
+              <input value={createUrl} onChange={(e) => setCreateUrl(e.target.value)}
+                placeholder="https://docs.google.com/... atau https://..."
+                className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
+                style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }} />
+            )}
+            {createErr && <div className="text-xs text-red-300">{createErr}</div>}
+          </div>
+          <div className="p-4 border-t border-white/10 flex justify-end gap-2">
+            <button type="button" onClick={() => setIsOpen(false)} disabled={creating}
+              className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 disabled:opacity-60">Cancel</button>
+            <button type="button" onClick={handleCreate} disabled={creating}
+              className="px-3 py-2 text-sm rounded-md font-semibold disabled:opacity-60"
+              style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}>
+              {creating ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </AddNewModal>
+
+        {!!deleteId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/60" onClick={() => !deleting && setDeleteId(null)} />
+            <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
+              <div className="p-4 border-b border-white/10">
+                <div className="text-sm font-semibold">Delete</div>
+                <div className="text-xs text-white/60 mt-1">Hapus: "{deleteTitle}"</div>
+              </div>
+              <div className="p-4 space-y-2">
+                <div className="text-sm text-white/75">Ini akan menghapus item permanen. Kalau folder, pastikan kosong dulu.</div>
+                {deleteErr && <div className="text-xs text-red-300">{deleteErr}</div>}
+              </div>
+              <div className="p-4 border-t border-white/10 flex justify-end gap-2">
+                <button type="button" onClick={() => setDeleteId(null)} disabled={deleting}
+                  className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 disabled:opacity-60">Cancel</button>
+                <button type="button" onClick={handleDeleteConfirm} disabled={deleting}
+                  className="px-3 py-2 text-sm rounded-md font-semibold disabled:opacity-60"
+                  style={{ backgroundColor: "rgb(239 68 68)", color: "var(--text-main)" }}>{deleting ? "Deleting..." : "Delete"}</button>
+              </div>
             </div>
           </div>
         )}
 
-        <div className="text-xs text-[var(--sidebar-text)] px-2 mb-2">Pages</div>
-
-        <TreeList
-          nodes={filteredRoots}
-          expanded={expanded}
-          onToggle={toggle}
-          activeSlug={activeSlug}
-          level={0}
-          canEdit={canEdit(role)}
-          onAdd={(parentId) => openCreate(parentId)}
-          onDelete={(node) => openDelete(node)}
-          onNavigate={(slug) => { router.push(`/p/${slug}`); router.refresh(); }}
-          onContextMenuNode={openContextMenu}
-        />
-      </div>
-
-      <AddNewModal open={isOpen && canEdit(role)} onClose={() => !creating && setIsOpen(false)}>
-        <div className="p-4 border-b border-white/10">
-          <div className="text-sm font-semibold">Add New</div>
-          <div className="text-xs text-white/60 mt-1">{createParentId ? "Create inside folder" : "Create at root"}</div>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            {(["sop", "doc", "report", "calendar", "folder", "link"] as CreateKind[]).map((k) => {
-              const m = kindMeta(k);
-              const active = createType === k;
-              return (
-                <button key={k} type="button" onClick={() => setCreateType(k)}
-                  className={`rounded-lg px-3 py-3 text-sm border text-left flex items-center gap-3 ${active ? "border-yellow-400/60" : "border-white/10"}`}
-                  style={{ backgroundColor: active ? "rgba(241,196,15,0.12)" : "rgba(255,255,255,0.04)" }}>
-                  <span className="text-lg">{m.emoji}</span>
-                  <span className="min-w-0">
-                    <div className="font-semibold leading-tight">{m.label}</div>
-                    <div className="text-xs text-white/60 truncate">{m.desc}</div>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <input value={createTitle} onChange={(e) => setCreateTitle(e.target.value)}
-            placeholder={createType === "folder" ? "Nama folder..." : "Judul page..."}
-            className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
-            style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }} />
-          {createType === "link" && (
-            <input value={createUrl} onChange={(e) => setCreateUrl(e.target.value)}
-              placeholder="https://docs.google.com/... atau https://..."
-              className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
-              style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }} />
-          )}
-          {createErr && <div className="text-xs text-red-300">{createErr}</div>}
-        </div>
-        <div className="p-4 border-t border-white/10 flex justify-end gap-2">
-          <button type="button" onClick={() => setIsOpen(false)} disabled={creating}
-            className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 disabled:opacity-60">Cancel</button>
-          <button type="button" onClick={handleCreate} disabled={creating}
-            className="px-3 py-2 text-sm rounded-md font-semibold disabled:opacity-60"
-            style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}>
-            {creating ? "Creating..." : "Create"}
-          </button>
-        </div>
-      </AddNewModal>
-
-      {!!deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => !deleting && setDeleteId(null)} />
-          <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
-            <div className="p-4 border-b border-white/10">
-              <div className="text-sm font-semibold">Delete</div>
-              <div className="text-xs text-white/60 mt-1">Hapus: "{deleteTitle}"</div>
-            </div>
-            <div className="p-4 space-y-2">
-              <div className="text-sm text-white/75">Ini akan menghapus item permanen. Kalau folder, pastikan kosong dulu.</div>
-              {deleteErr && <div className="text-xs text-red-300">{deleteErr}</div>}
-            </div>
-            <div className="p-4 border-t border-white/10 flex justify-end gap-2">
-              <button type="button" onClick={() => setDeleteId(null)} disabled={deleting}
-                className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 disabled:opacity-60">Cancel</button>
-              <button type="button" onClick={handleDeleteConfirm} disabled={deleting}
-                className="px-3 py-2 text-sm rounded-md font-semibold disabled:opacity-60"
-                style={{ backgroundColor: "rgb(239 68 68)", color: "var(--text-main)" }}>{deleting ? "Deleting..." : "Delete"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-{ctxOpen && ctxTarget &&
-  createPortal(
-    <>
-      {/* backdrop */}
-      <div
-        className="fixed inset-0 z-[9998]"
-        onClick={() => {
-          setCtxOpen(false);
-          setCtxTarget(null);
-        }}
-      />
-
-      {/* context menu */}
-      <div
-        className="popup-surface fixed z-[9999] w-[260px] rounded-xl border border-white/10 shadow-xl overflow-hidden"
-        style={{
-          left: ctxPos.x,
-          top: ctxPos.y,
-          background: "linear-gradient(180deg, rgba(20,20,20,0.98), rgba(2,6,23,0.98))",
-          color: "var(--text-main)",
-        }}
-      >
-        <div className="px-3 py-2 border-b border-white/10">
-          <div className="flex items-center gap-1.5 text-xs text-white/60 min-w-0">
-            <span className="shrink-0">
-              {getNodeIcon(ctxTarget.node.icon, ctxTarget.node.type)}
-            </span>
-            <span className="truncate">{ctxTarget.node.title}</span>
-          </div>
-        </div>
-
-        <div className="p-1">
-          {ctxTarget.kind === "folder" && canEdit(role) && (
+        {ctxOpen && ctxTarget &&
+          createPortal(
             <>
-              <CtxItem
-                label="Add subpage"
-                subLabel="Buat page di dalam folder"
-                icon="➕"
+              {/* backdrop */}
+              <div
+                className="fixed inset-0 z-[9998]"
                 onClick={() => {
                   setCtxOpen(false);
-                  openCreate(ctxTarget.node.id, "sop");
+                  setCtxTarget(null);
                 }}
               />
-              <CtxItem
-                label="Add folder"
-                subLabel="Buat folder di dalam folder"
-                icon="📁"
-                onClick={() => {
-                  setCtxOpen(false);
-                  openCreate(ctxTarget.node.id, "folder");
+
+              {/* context menu */}
+              <div
+                className="popup-surface fixed z-[9999] w-[260px] rounded-xl border border-white/10 shadow-xl overflow-hidden"
+                style={{
+                  left: ctxPos.x,
+                  top: ctxPos.y,
+                  background: "linear-gradient(180deg, rgba(20,20,20,0.98), rgba(2,6,23,0.98))",
+                  color: "var(--text-main)",
                 }}
-              />
-              <CtxSep />
-            </>
-          )}
+              >
+                <div className="px-3 py-2 border-b border-white/10">
+                  <div className="flex items-center gap-1.5 text-xs text-white/60 min-w-0">
+                    <span className="shrink-0">
+                      {getNodeIcon(ctxTarget.node.icon, ctxTarget.node.type)}
+                    </span>
+                    <span className="truncate">{ctxTarget.node.title}</span>
+                  </div>
+                </div>
 
-          {ctxTarget.kind === "page" && (
-            <>
-              <CtxItem
-                label={pinIds.has(ctxTarget.node.id) ? "Unpin" : "Pin"}
-                subLabel="Simpan di Pinned"
-                icon="📌"
-                onClick={() => {
-                  setCtxOpen(false);
-                  void togglePin(ctxTarget.node.id);
-                }}
-              />
-              <CtxSep />
-            </>
-          )}
+                <div className="p-1">
+                  {ctxTarget.kind === "folder" && canEdit(role) && (
+                    <>
+                      <CtxItem
+                        label="Add subpage"
+                        subLabel="Buat page di dalam folder"
+                        icon="➕"
+                        onClick={() => {
+                          setCtxOpen(false);
+                          openCreate(ctxTarget.node.id, "sop");
+                        }}
+                      />
+                      <CtxItem
+                        label="Add folder"
+                        subLabel="Buat folder di dalam folder"
+                        icon="📁"
+                        onClick={() => {
+                          setCtxOpen(false);
+                          openCreate(ctxTarget.node.id, "folder");
+                        }}
+                      />
+                      <CtxSep />
+                    </>
+                  )}
 
-          {canEdit(role) && (
-            <CtxItem
-              label="Rename"
-              subLabel="Ubah nama"
-              icon="✏️"
-              onClick={() => startRename(ctxTarget.node.title)}
-            />
-          )}
+                  {ctxTarget.kind === "page" && (
+                    <>
+                      <CtxItem
+                        label={pinIds.has(ctxTarget.node.id) ? "Unpin" : "Pin"}
+                        subLabel="Simpan di Pinned"
+                        icon="📌"
+                        onClick={() => {
+                          setCtxOpen(false);
+                          void togglePin(ctxTarget.node.id);
+                        }}
+                      />
+                      <CtxSep />
+                    </>
+                  )}
 
-          <CtxItem
-            label="Copy link"
-            subLabel="Salin URL"
-            icon="🔗"
-            onClick={() => {
-              setCtxOpen(false);
-              void copyLink(ctxTarget.node.slug);
-            }}
-          />
+                  {canEdit(role) && (
+                    <CtxItem
+                      label="Rename"
+                      subLabel="Ubah nama"
+                      icon="✏️"
+                      onClick={() => startRename(ctxTarget.node.title)}
+                    />
+                  )}
 
-          <CtxItem
-            label="Open in new tab"
-            subLabel="Buka tab baru"
-            icon="🗂️"
-            onClick={() => {
-              setCtxOpen(false);
-              openNewTab(ctxTarget.node.slug);
-            }}
-          />
+                  <CtxItem
+                    label="Copy link"
+                    subLabel="Salin URL"
+                    icon="🔗"
+                    onClick={() => {
+                      setCtxOpen(false);
+                      void copyLink(ctxTarget.node.slug);
+                    }}
+                  />
 
-          <CtxSep />
+                  <CtxItem
+                    label="Open in new tab"
+                    subLabel="Buka tab baru"
+                    icon="🗂️"
+                    onClick={() => {
+                      setCtxOpen(false);
+                      openNewTab(ctxTarget.node.slug);
+                    }}
+                  />
 
-          {canEdit(role) && (
-            <CtxItem
-              label="Delete"
-              subLabel="Hapus permanen"
-              icon="🗑️"
-              danger
-              onClick={() => {
-                setCtxOpen(false);
-                openDelete(ctxTarget.node);
-              }}
-            />
-          )}
-        </div>
-      </div>
-    </>,
-    document.body
-  )
-}
+                  <CtxSep />
 
+                  {canEdit(role) && (
+                    <CtxItem
+                      label="Delete"
+                      subLabel="Hapus permanen"
+                      icon="🗑️"
+                      danger
+                      onClick={() => {
+                        setCtxOpen(false);
+                        openDelete(ctxTarget.node);
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            </>,
+            document.body
+          )
+        }
 
-      {renameOpen && ctxTarget && canEdit(role) && (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/60" onClick={() => !renameBusy && setRenameOpen(false)} />
-          <div className="relative w-full max-w-sm rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
-            <div className="p-4 border-b border-white/10">
-              <div className="text-sm font-semibold">Rename</div>
-              <div className="text-xs text-white/60 mt-1">Ubah nama: {ctxTarget.node.title}</div>
-            </div>
-            <div className="p-4 space-y-2">
-              <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
-                style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }} autoFocus />
-              {renameErr && <div className="text-xs text-red-300">{renameErr}</div>}
-            </div>
-            <div className="p-4 border-t border-white/10 flex justify-end gap-2">
-              <button type="button" onClick={() => setRenameOpen(false)} disabled={renameBusy}
-                className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 disabled:opacity-60">Cancel</button>
-              <button type="button" onClick={confirmRename} disabled={renameBusy}
-                className="px-3 py-2 text-sm rounded-md font-semibold disabled:opacity-60"
-                style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}>{renameBusy ? "Saving..." : "Save"}</button>
+        {renameOpen && ctxTarget && canEdit(role) && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/60" onClick={() => !renameBusy && setRenameOpen(false)} />
+            <div className="relative w-full max-w-sm rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
+              <div className="p-4 border-b border-white/10">
+                <div className="text-sm font-semibold">Rename</div>
+                <div className="text-xs text-white/60 mt-1">Ubah nama: {ctxTarget.node.title}</div>
+              </div>
+              <div className="p-4 space-y-2">
+                <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                  className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
+                  style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }} autoFocus />
+                {renameErr && <div className="text-xs text-red-300">{renameErr}</div>}
+              </div>
+              <div className="p-4 border-t border-white/10 flex justify-end gap-2">
+                <button type="button" onClick={() => setRenameOpen(false)} disabled={renameBusy}
+                  className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 disabled:opacity-60">Cancel</button>
+                <button type="button" onClick={confirmRename} disabled={renameBusy}
+                  className="px-3 py-2 text-sm rounded-md font-semibold disabled:opacity-60"
+                  style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}>{renameBusy ? "Saving..." : "Save"}</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </aside>
   );
 }
@@ -992,5 +1060,3 @@ function AddMenu({ onCreate }: { onCreate: (kind: CreateKind) => void }) {
     </>
   );
 }
-
-/* -------- TreeList with requested arrow/empty behavior -------- */

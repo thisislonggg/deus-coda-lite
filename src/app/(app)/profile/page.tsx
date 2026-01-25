@@ -199,7 +199,7 @@ export default function ProfilePage() {
               <div className="grid gap-3">
                 <div>
                   <div className="text-xs text-[var(--color-muted)] mb-1">Email</div>
-                  <div className="rounded-lg bg-black/5 dark:bg-[var(--bg-card)]/5 border border-black/10 dark:border-[var(--border-main)] px-3 py-2">
+                  <div className="w-full rounded-lg bg-black/5 dark:bg-[var(--bg-card)]/10 border border-black/10 dark:border-white/15 px-3 py-2 outline-none text-[var(--color-text)]">
                     {email || "-"}
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={saveName}
                     disabled={savingName}
-                    className="px-4 py-2 rounded-lg font-semibold text-black bg-[var(--color-accent)] disabled:opacity-60"
+                  className="px-4 py-2 rounded-lg font-semibold border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-[var(--bg-card)]/10 text-[var(--color-text)]"
                   >
                     {savingName ? "Saving..." : "Simpan Nama"}
                   </button>
@@ -252,7 +252,7 @@ export default function ProfilePage() {
                     type="button"
                     onClick={savePassword}
                     disabled={savingPass}
-                    className="px-4 py-2 rounded-lg font-semibold text-black bg-[var(--color-accent)] disabled:opacity-60"
+                  className="px-4 py-2 rounded-lg font-semibold border border-black/10 dark:border-white/15 hover:bg-black/5 dark:hover:bg-[var(--bg-card)]/10 text-[var(--color-text)]"
                   >
                     {savingPass ? "Saving..." : "Ganti Password"}
                   </button>
