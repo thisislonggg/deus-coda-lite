@@ -656,7 +656,7 @@ const [userMenuOpen, setUserMenuOpen] = useState(false);
 
       {/* dropdown */}
       <div
-  className="absolute right-0 mt-2 w-40 rounded-xl border border-[var(--sidebar-border)] shadow-xl"
+  className="absolute right-0 mt-2 z-50 w-40 rounded-xl border border-[var(--sidebar-border)] shadow-xl"
   style={{
     backgroundColor: "var(--bg-popup)",
     color: "var(--popup-text)",
