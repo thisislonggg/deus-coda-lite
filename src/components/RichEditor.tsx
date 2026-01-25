@@ -205,7 +205,10 @@ export default function RichEditor({
     const newPalette = isDarkMode ? TEXT_COLOR_PALETTE_DARK : TEXT_COLOR_PALETTE_LIGHT;
     
     // Jika warna saat ini tidak ada di palette baru, reset ke warna pertama palette
-    if (textColor && !newPalette.includes(textColor as any)) {
+    if (
+  textColor &&
+  !newPalette.includes(textColor as (typeof newPalette)[number])
+) {
       setTextColor(newPalette[0]);
     }
   }, [isDarkMode, editor, textColor, initialThemeChecked]);
