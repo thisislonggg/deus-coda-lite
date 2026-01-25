@@ -11,21 +11,71 @@ function ResetPasswordContent() {
   const supabase = useMemo(() => createSupabaseBrowser(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-
+  
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<"input" | "success">("input");
+  const [step, setStep] = useState<"verify" | "input" | "success">("verify");
+  const [isValidToken, setIsValidToken] = useState<boolean | null>(null);
 
-  // Verify token on mount
+  // Extract token from URL
   useEffect(() => {
-    if (!token) {
-      setError("Token reset password tidak valid atau sudah kadaluarsa.");
-    }
-  }, [token]);
+    const checkToken = async () => {
+      try {
+        // Cek apakah user sudah memiliki session valid
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          // Jika sudah ada session, langsung ke input password
+          setIsValidToken(true);
+          setStep("input");
+          return;
+        }
+
+        // Coba ekstrak token dari berbagai sumber
+        const hash = window.location.hash.substring(1);
+        const hashParams = new URLSearchParams(hash);
+        const tokenFromHash = hashParams.get('access_token') || hashParams.get('token');
+        
+        const searchParams = new URLSearchParams(window.location.search);
+        const tokenFromQuery = searchParams.get('token');
+        
+        const token = tokenFromHash || tokenFromQuery;
+
+        if (!token) {
+          setIsValidToken(false);
+          return;
+        }
+
+        // Coba set session dengan token
+        const { error: tokenError } = await supabase.auth.setSession({
+          access_token: token,
+          refresh_token: "",
+        });
+
+        if (tokenError) {
+          console.error("Token error:", tokenError);
+          setIsValidToken(false);
+          return;
+        }
+
+        // Token valid, lanjut ke input password
+        setIsValidToken(true);
+        setStep("input");
+        
+        // Clear URL hash/query untuk keamanan
+        window.history.replaceState({}, "", window.location.pathname);
+        
+      } catch (err) {
+        console.error("Error checking token:", err);
+        setIsValidToken(false);
+      }
+    };
+
+    checkToken();
+  }, [supabase.auth]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,12 +93,22 @@ function ResetPasswordContent() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Cek session sebelum update
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setError("Session tidak valid. Silakan minta link reset password baru.");
+        setLoading(false);
+        return;
+      }
+
+      // Update user password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) {
-        setError(error.message);
+      if (updateError) {
+        setError(updateError.message);
         setLoading(false);
         return;
       }
@@ -56,6 +116,9 @@ function ResetPasswordContent() {
       // Password changed successfully
       setStep("success");
       setMessage("Password berhasil diubah! Anda akan diarahkan ke halaman login.");
+
+      // Sign out untuk fresh session
+      await supabase.auth.signOut();
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
@@ -67,7 +130,20 @@ function ResetPasswordContent() {
     }
   }
 
-  if (!token) {
+  // Render berdasarkan step
+  if (step === "verify") {
+    return (
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-16 h-16 bg-white/10 rounded-xl animate-pulse"></div>
+          <div className="mt-4 w-32 h-6 bg-white/10 rounded animate-pulse"></div>
+          <div className="mt-1 w-48 h-4 bg-white/5 rounded animate-pulse"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isValidToken === false) {
     return (
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
         <div className="flex flex-col items-center text-center">
@@ -83,40 +159,47 @@ function ResetPasswordContent() {
           <p className="mt-3 text-sm text-white/70">
             Link reset password tidak valid atau sudah kadaluarsa.
           </p>
-          <Link
-            href="/forgot-password"
-            className="mt-4 text-yellow-300 hover:underline text-sm"
-          >
-            Minta link reset baru
-          </Link>
+          <p className="mt-2 text-xs text-white/50">
+            Pastikan Anda mengklik link lengkap dari email atau minta link baru.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 w-full">
+            <Link
+              href="/forgot-password"
+              className="px-4 py-3 rounded-lg bg-yellow-400 text-black font-semibold hover:bg-yellow-500 transition-colors text-center"
+            >
+              Minta Link Baru
+            </Link>
+            <Link
+              href="/login"
+              className="px-4 py-3 rounded-lg border border-white/15 text-white font-semibold hover:bg-white/10 transition-colors text-center"
+            >
+              Kembali ke Login
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
-      {/* Logo */}
-      <div className="flex flex-col items-center text-center">
-        <Image
-          src="/logo-deus.webp"
-          alt="Deus Code"
-          width={64}
-          height={64}
-          priority
-          className="rounded-xl"
-        />
-        <h1 className="mt-4 text-xl font-semibold text-white">
-          {step === "input" ? "Password Baru" : "Berhasil!"}
-        </h1>
-        <p className="mt-1 text-sm text-white/70">
-          {step === "input" 
-            ? "Masukkan password baru untuk akun Anda" 
-            : "Password telah diubah"}
-        </p>
-      </div>
+  if (step === "input") {
+    return (
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
+        {/* Logo */}
+        <div className="flex flex-col items-center text-center">
+          <Image
+            src="/logo-deus.webp"
+            alt="Deus Code"
+            width={64}
+            height={64}
+            priority
+            className="rounded-xl"
+          />
+          <h1 className="mt-4 text-xl font-semibold text-white">Password Baru</h1>
+          <p className="mt-1 text-sm text-white/70">
+            Masukkan password baru untuk akun Anda
+          </p>
+        </div>
 
-      {step === "input" ? (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <input
@@ -156,29 +239,54 @@ function ResetPasswordContent() {
             {loading ? "Mengubah..." : "Ubah Password"}
           </button>
         </form>
-      ) : (
-        <div className="mt-6 space-y-4">
-          {message && (
-            <div className="text-sm text-green-300 bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-              ✅ {message}
-            </div>
-          )}
 
-          <div className="text-sm text-white/70 bg-white/5 border border-white/10 rounded-lg p-4">
-            <p className="mb-3">Password Anda telah berhasil diubah.</p>
-            <p className="text-xs">
-              Anda akan otomatis diarahkan ke halaman login. Jika tidak, klik tombol di bawah.
-            </p>
-          </div>
-
-          <Link
-            href="/login"
-            className="block text-center w-full rounded-lg bg-yellow-400 px-4 py-3 font-semibold text-black hover:bg-yellow-500 transition-colors"
-          >
-            Login Sekarang
+        <div className="mt-6 pt-4 border-t border-white/10 text-center text-sm text-white/70">
+          <Link href="/" className="text-yellow-300 hover:underline">
+            ← Kembali ke Home
           </Link>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  // Success step
+  return (
+    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
+      {/* Logo */}
+      <div className="flex flex-col items-center text-center">
+        <Image
+          src="/logo-deus.webp"
+          alt="Deus Code"
+          width={64}
+          height={64}
+          priority
+          className="rounded-xl"
+        />
+        <h1 className="mt-4 text-xl font-semibold text-white">Berhasil!</h1>
+        <p className="mt-1 text-sm text-white/70">Password telah diubah</p>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {message && (
+          <div className="text-sm text-green-300 bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+            ✅ {message}
+          </div>
+        )}
+
+        <div className="text-sm text-white/70 bg-white/5 border border-white/10 rounded-lg p-4">
+          <p className="mb-3">Password Anda telah berhasil diubah.</p>
+          <p className="text-xs">
+            Anda akan otomatis diarahkan ke halaman login. Jika tidak, klik tombol di bawah.
+          </p>
+        </div>
+
+        <Link
+          href="/login"
+          className="block text-center w-full rounded-lg bg-yellow-400 px-4 py-3 font-semibold text-black hover:bg-yellow-500 transition-colors"
+        >
+          Login Sekarang
+        </Link>
+      </div>
 
       <div className="mt-6 pt-4 border-t border-white/10 text-center text-sm text-white/70">
         <Link href="/" className="text-yellow-300 hover:underline">
@@ -189,7 +297,7 @@ function ResetPasswordContent() {
   );
 }
 
-// Loading component
+// Loading component untuk Suspense
 function ResetPasswordLoading() {
   return (
     <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
@@ -207,7 +315,9 @@ function ResetPasswordLoading() {
   );
 }
 
-// Halaman utama dengan Suspense
+// Halaman utama dengan dynamic export
+export const dynamic = 'force-dynamic';
+
 export default function ResetPasswordPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">

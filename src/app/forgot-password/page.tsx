@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = 'force-dynamic';
+
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +23,7 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
+      // Update redirectTo ke halaman reset-password langsung
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
