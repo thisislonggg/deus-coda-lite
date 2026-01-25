@@ -73,6 +73,10 @@ export default function PageView() {
   // icon picker state
   const [iconOpen, setIconOpen] = useState(false);
   const [customIcon, setCustomIcon] = useState("");
+  
+  // Ref untuk popup icon picker
+  const iconPopupRef = useRef<HTMLDivElement>(null);
+  const iconButtonRef = useRef<HTMLButtonElement>(null);
 
   function flash(msg: string) {
     setSaveMsg(msg);
@@ -85,6 +89,28 @@ export default function PageView() {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
   }, []);
+
+  // Effect untuk menutup popup icon ketika klik di luar
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // Jika popup terbuka dan klik di luar popup DAN di luar tombol icon
+      if (iconOpen && 
+          iconPopupRef.current && 
+          !iconPopupRef.current.contains(event.target as Node) &&
+          iconButtonRef.current &&
+          !iconButtonRef.current.contains(event.target as Node)) {
+        setIconOpen(false);
+      }
+    }
+    
+    // Tambahkan event listener
+    document.addEventListener("mousedown", handleClickOutside);
+    
+    // Cleanup
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [iconOpen]); // Hanya re-run ketika iconOpen berubah
 
   // load role
   useEffect(() => {
@@ -179,14 +205,15 @@ export default function PageView() {
 
     setPage((p) => (p ? { ...p, icon: next } : p));
     flash("Icon updated ✅");
+    setIconOpen(false); // Tutup popup setelah icon di-update
   }
 
   // loading states
   if (loading) {
-    return <div className="min-h-screen bg-slate-950 text-white/60 p-6">Loading...</div>;
+    return <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6">Loading...</div>;
   }
   if (!page) {
-    return <div className="min-h-screen bg-slate-950 text-white/60 p-6">Page tidak ditemukan.</div>;
+    return <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6">Page tidak ditemukan.</div>;
   }
 
   const isFolder = page.type === "folder";
@@ -198,7 +225,7 @@ export default function PageView() {
   const presetIcons = [...(ICON_PRESETS[page.type] ?? []), ...ICON_PRESETS.general];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-6">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-5">
         {/* Left: icon + title */}
@@ -208,27 +235,30 @@ export default function PageView() {
             {allowEdit ? (
               <>
                 <button
+                  ref={iconButtonRef}
                   type="button"
                   onClick={() => setIconOpen((v) => !v)}
-                  className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 grid place-items-center text-2xl"
+                  className="h-11 w-11 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] hover:bg-[var(--bg-card)]/80 grid place-items-center text-2xl"
                   title="Ubah icon"
                 >
                   {shownIcon}
                 </button>
 
                 {iconOpen && (
-                  <div className="absolute z-50 mt-2 w-72 rounded-2xl border border-white/10 bg-slate-950 shadow-xl p-3">
-                    <div className="text-xs text-white/60 mb-2">Pilih icon</div>
+                  <div 
+                    ref={iconPopupRef}
+                    className="absolute z-50 mt-2 w-72 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] shadow-xl p-3"
+                  >
+                    <div className="text-xs text-[var(--color-text)]/60 mb-2">Pilih icon</div>
 
                     <div className="grid grid-cols-8 gap-1">
                       {presetIcons.map((ic) => (
                         <button
                           key={ic}
                           type="button"
-                          className="h-9 w-9 rounded-lg hover:bg-white/10 grid place-items-center text-lg"
+                          className="h-9 w-9 rounded-lg hover:bg-[var(--sidebar-hover)] grid place-items-center text-lg"
                           onClick={() => {
                             void updateIcon(ic);
-                            setIconOpen(false);
                           }}
                         >
                           {ic}
@@ -236,24 +266,30 @@ export default function PageView() {
                       ))}
                     </div>
 
-                    <div className="h-px bg-white/10 my-3" />
+                    <div className="h-px bg-[var(--border-main)] my-3" />
 
-                    <div className="text-xs text-white/60 mb-2">Custom (paste emoji sendiri)</div>
+                    <div className="text-xs text-[var(--color-text)]/60 mb-2">Custom (paste emoji sendiri)</div>
                     <div className="flex gap-2">
                       <input
                         value={customIcon}
                         onChange={(e) => setCustomIcon(e.target.value)}
                         placeholder="contoh: 🧾"
-                        className="flex-1 rounded-md bg-white/5 border border-white/10 px-2 py-2 text-sm text-white outline-none"
+                        className="flex-1 rounded-md bg-[var(--bg-card)] border border-[var(--border-main)] px-2 py-2 text-sm text-[var(--color-text)] outline-none"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const ic = customIcon.trim();
+                            if (ic) void updateIcon(ic);
+                            setCustomIcon("");
+                          }
+                        }}
                       />
                       <button
                         type="button"
-                        className="px-3 py-2 rounded-md text-sm border border-white/10 hover:bg-white/10"
+                        className="px-3 py-2 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
                         onClick={() => {
                           const ic = customIcon.trim();
                           if (ic) void updateIcon(ic);
                           setCustomIcon("");
-                          setIconOpen(false);
                         }}
                       >
                         Set
@@ -262,10 +298,9 @@ export default function PageView() {
 
                     <button
                       type="button"
-                      className="mt-3 text-xs text-white/60 hover:text-white"
+                      className="mt-3 text-xs text-[var(--color-text)]/60 hover:text-[var(--color-text)]"
                       onClick={() => {
                         void updateIcon(null);
-                        setIconOpen(false);
                       }}
                     >
                       Hapus icon
@@ -274,7 +309,7 @@ export default function PageView() {
                 )}
               </>
             ) : (
-              <div className="h-11 w-11 rounded-2xl border border-white/10 bg-white/5 grid place-items-center text-2xl">
+              <div className="h-11 w-11 rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] grid place-items-center text-2xl">
                 {shownIcon}
               </div>
             )}
@@ -282,11 +317,11 @@ export default function PageView() {
 
           {/* Title + meta */}
           <div className="min-w-0">
-            <div className="text-3xl font-bold text-white truncate">{page.title}</div>
-            <div className="text-sm text-white/55 mt-1">
+            <div className="text-3xl font-bold text-[var(--color-text)] truncate">{page.title}</div>
+            <div className="text-sm text-[var(--color-muted)] mt-1">
               {isFolder ? "Folder" : isLink ? "Google Link" : "Page"} •{" "}
               {page.status === "draft" ? "Draft" : "Published"} •{" "}
-              {dirty ? <span className="text-yellow-300/90">Unsaved</span> : <span className="text-emerald-300/90">Saved</span>}
+              {dirty ? <span className="text-yellow-600 dark:text-yellow-300/90">Unsaved</span> : <span className="text-emerald-600 dark:text-emerald-300/90">Saved</span>}
             </div>
           </div>
         </div>
@@ -297,7 +332,7 @@ export default function PageView() {
             <button
               type="button"
               className={`px-3 py-2 rounded-md text-sm border transition ${
-                mode === "preview" ? "bg-white/10 border-white/15" : "border-white/10 hover:bg-white/10"
+                mode === "preview" ? "bg-[var(--sidebar-hover)] border-[var(--border-main)]" : "border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
               }`}
               onClick={() => setMode("preview")}
             >
@@ -307,7 +342,7 @@ export default function PageView() {
             <button
               type="button"
               className={`px-3 py-2 rounded-md text-sm border transition ${
-                mode === "edit" ? "bg-white/10 border-white/15" : "border-white/10 hover:bg-white/10"
+                mode === "edit" ? "bg-[var(--sidebar-hover)] border-[var(--border-main)]" : "border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
               }`}
               onClick={() => setMode("edit")}
             >
@@ -327,22 +362,22 @@ export default function PageView() {
         )}
       </div>
 
-      {saveMsg && <div className="text-xs text-white/70 mb-4">{saveMsg}</div>}
+      {saveMsg && <div className="text-xs text-[var(--color-text)]/70 mb-4">{saveMsg}</div>}
 
       {/* Folder cards */}
       {isFolder && (
         <>
           <FolderContentsGrid folderId={page.id} showDrafts title="Isi Folder" />
-          <div className="h-px w-full bg-white/10 my-6" />
+          <div className="h-px w-full bg-[var(--border-main)] my-6" />
         </>
       )}
 
       {/* Link Preview Card */}
       {isLink && (
-        <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-5 mb-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
+        <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-5 mb-6">
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-white/90">Preview</div>
+              <div className="text-sm font-semibold text-[var(--color-text)]">Preview</div>
             </div>
 
             {url && (
@@ -350,7 +385,7 @@ export default function PageView() {
                 href={url}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-2 rounded-md text-sm border border-white/15 hover:bg-white/10"
+                className="px-3 py-2 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
               >
                 🔗 Open
               </a>
@@ -358,18 +393,18 @@ export default function PageView() {
           </div>
 
           {embedUrl ? (
-            <div className="rounded-xl overflow-hidden border border-white/10 bg-black">
+            <div className="rounded-xl overflow-hidden border border-[var(--border-main)] bg-black">
               <iframe src={embedUrl} className="w-full h-[70vh]" allow="clipboard-read; clipboard-write" />
             </div>
           ) : (
-            <div className="text-sm text-white/60">Link belum ada atau format link belum didukung untuk embed.</div>
+            <div className="text-sm text-[var(--color-muted)]">Link belum ada atau format link belum didukung untuk embed.</div>
           )}
         </div>
       )}
 
       {/* Notes / Content */}
-      <div className="rounded-2xl border border-white/10 bg-slate-900/50 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] min-w-0">
-        <div className="text-sm font-semibold text-white/85 mb-3">{isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}</div>
+      <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 min-w-0">
+        <div className="text-sm font-semibold text-[var(--color-text)] mb-3">{isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}</div>
 
         {allowEdit && mode === "edit" ? (
           <RichEditor
@@ -383,20 +418,20 @@ export default function PageView() {
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
         ) : (
-<div
-  className="
-    text-white/85
-    [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:my-3
-    [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:my-3
-    [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:my-3
-    [&_p]:my-2
-    [&_li]:my-1
+          <div
+            className="
+              text-[var(--color-text)]
+              [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:my-3
+              [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:my-3
+              [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:my-3
+              [&_p]:my-2
+              [&_li]:my-1
 
-    whitespace-pre-wrap break-words [overflow-wrap:anywhere]
-    [&_pre]:overflow-x-auto
-  "
-  dangerouslySetInnerHTML={{ __html: draftContent }}
-/>
+              whitespace-pre-wrap break-words [overflow-wrap:anywhere]
+              [&_pre]:overflow-x-auto
+            "
+            dangerouslySetInnerHTML={{ __html: draftContent }}
+          />
         )}
       </div>
     </div>

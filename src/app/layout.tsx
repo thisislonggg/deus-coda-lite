@@ -6,10 +6,42 @@ export const metadata: Metadata = {
   description: "SOP & Admin Docs",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="id">
-      <body className="bg-neutral-50 text-neutral-900">{children}</body>
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var savedTheme = localStorage.getItem('theme');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  
+                  var theme = savedTheme || (prefersDark ? 'dark' : 'light');
+                  
+                  document.documentElement.classList.add(theme);
+                  localStorage.setItem('theme', theme);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body
+        className="
+          bg-[var(--color-bg)]
+          text-[var(--color-text)]
+          transition-colors
+        "
+      >
+        {children}
+      </body>
     </html>
   );
 }

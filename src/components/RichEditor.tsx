@@ -67,7 +67,7 @@ export default function RichEditor({
   const linkInputRef = useRef<HTMLInputElement | null>(null);
 
   // Text color state (✅ preset only)
-  const [textColor, setTextColor] = useState<TextColor>("#FFFFFF");
+  const [textColor, setTextColor] = useState<TextColor>(TEXT_COLOR_PALETTE[0]);
 
   // Highlight state (unchanged)
   const [hlColor, setHlColor] = useState("#fde047"); // yellow-ish
@@ -284,10 +284,11 @@ export default function RichEditor({
     editor.chain().focus().setColor(hex).run();
   }
 
-  // ✅ preset reset to white
+  // ✅ preset reset to default
   function unsetTextColorCmd() {
     if (!editor) return;
-    setTextColor("#FFFFFF");
+    const defaultColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim() || '#000000';
+    setTextColor(defaultColor as TextColor);
     editor.chain().focus().unsetColor().run();
   }
 
@@ -307,15 +308,15 @@ export default function RichEditor({
   const shortcutLabel = isMac() ? "⌘K" : "Ctrl+K";
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/40">
+    <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)]">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-white/10">
+      <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-[var(--border-main)]">
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("bold") ? "bg-white/10" : ""
-          }`}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("bold") ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
         >
           Bold
         </button>
@@ -323,9 +324,9 @@ export default function RichEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("heading", { level: 1 }) ? "bg-white/10" : ""
-          }`}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("heading", { level: 1 }) ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
         >
           H1
         </button>
@@ -333,9 +334,9 @@ export default function RichEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("heading", { level: 2 }) ? "bg-white/10" : ""
-          }`}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("heading", { level: 2 }) ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
         >
           H2
         </button>
@@ -343,39 +344,38 @@ export default function RichEditor({
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("heading", { level: 3 }) ? "bg-white/10" : ""
-          }`}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("heading", { level: 3 }) ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
         >
           H3
         </button>
 
         <button
-  type="button"
-  onClick={() => editor.chain().focus().toggleBulletList().run()}
-  className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-    editor.isActive("bulletList") ? "bg-white/10" : ""
-  }`}
->
-  • List
-</button>
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("bulletList") ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
+        >
+          • List
+        </button>
 
-<button
-  type="button"
-  onClick={() => editor.chain().focus().toggleOrderedList().run()}
-  className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-    editor.isActive("orderedList") ? "bg-white/10" : ""
-  }`}
->
-  1. List
-</button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("orderedList") ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
+        >
+          1. List
+        </button>
 
-
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-[var(--border-main)] mx-1" />
 
         {/* ✅ Text Color (5 presets only) */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/60">Text</span>
+          <span className="text-xs text-[var(--color-muted)]">Text</span>
 
           <div className="flex items-center gap-1">
             {TEXT_COLOR_PALETTE.map((c) => {
@@ -386,12 +386,12 @@ export default function RichEditor({
                   type="button"
                   onClick={() => setTextColorCmd(c)}
                   className={`h-8 w-8 rounded-md border transition ${
-                    active ? "border-white/60" : "border-white/10 hover:border-white/30"
+                    active ? "border-[var(--color-text)]/60" : "border-[var(--border-main)] hover:border-[var(--color-text)]/30"
                   }`}
                   title={c.replace("#", "")}
                   style={{
                     backgroundColor: c,
-                    boxShadow: active ? "0 0 0 2px rgba(255,255,255,0.18)" : undefined,
+                    boxShadow: active ? "0 0 0 2px rgba(241,196,15,0.18)" : undefined,
                   }}
                 />
               );
@@ -401,7 +401,7 @@ export default function RichEditor({
           <button
             type="button"
             onClick={unsetTextColorCmd}
-            className="px-2 py-1 rounded-md text-xs border border-white/10 hover:bg-white/10 text-white/80"
+            className="px-2 py-1 rounded-md text-xs border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--color-text)]"
             title="Reset text color"
           >
             Reset
@@ -410,46 +410,46 @@ export default function RichEditor({
 
         {/* Highlight */}
         <div className="flex items-center gap-2 ml-1">
-          <span className="text-xs text-white/60">HL</span>
+          <span className="text-xs text-[var(--color-muted)]">HL</span>
           <input
             type="color"
             value={hlColor}
             onChange={(e) => setHighlightCmd(e.target.value)}
-            className="h-8 w-8 p-0 border border-white/10 rounded-md bg-transparent cursor-pointer"
+            className="h-8 w-8 p-0 border border-[var(--border-main)] rounded-md bg-transparent cursor-pointer"
             title="Highlight color"
           />
           <button
             type="button"
             onClick={unsetHighlightCmd}
-            className="px-2 py-1 rounded-md text-xs border border-white/10 hover:bg-white/10 text-white/80"
+            className="px-2 py-1 rounded-md text-xs border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-[var(--color-text)]"
             title="Remove highlight"
           >
             Clear
           </button>
         </div>
 
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-[var(--border-main)] mx-1" />
 
         {/* Link (✅ back to your version) */}
         <button
           type="button"
           onClick={openLinkModalFromSelection}
-          className={`px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 ${
-            editor.isActive("link") ? "bg-white/10" : ""
-          }`}
+          className={`px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] ${
+            editor.isActive("link") ? "bg-[var(--sidebar-hover)]" : ""
+          } text-[var(--color-text)]`}
           title={`Insert/edit link (${shortcutLabel})`}
         >
-          🔗 Link <span className="text-xs text-white/50 ml-1">{shortcutLabel}</span>
+          🔗 Link <span className="text-xs text-[var(--color-muted)] ml-1">{shortcutLabel}</span>
         </button>
 
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-[var(--border-main)] mx-1" />
 
         {/* Upload image button */}
         <button
           type="button"
           onClick={handlePickClick}
           disabled={!editable || imgUploading}
-          className="px-2 py-1 rounded-md text-sm border border-white/10 hover:bg-white/10 disabled:opacity-60"
+          className="px-2 py-1 rounded-md text-sm border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] disabled:opacity-60 text-[var(--color-text)]"
           title="Upload gambar"
         >
           {imgUploading ? "Uploading..." : "Image"}
@@ -468,38 +468,38 @@ export default function RichEditor({
         />
       </div>
 
-      {imgError && <div className="px-4 pt-3 text-xs text-red-300">{imgError}</div>}
+      {imgError && <div className="px-4 pt-3 text-xs text-red-500">{imgError}</div>}
 
       {/* Editor */}
       <div className="p-4">
         <EditorContent
-        editor={editor}
-        className="
-          prose prose-invert max-w-none
-          prose-h1:text-3xl prose-h1:font-bold
-          prose-h2:text-2xl prose-h2:font-semibold
-          prose-h3:text-xl prose-h3:font-semibold
-          prose-p:text-base prose-p:text-white/85
-          prose-li:text-white/85
+          editor={editor}
+          className="
+            prose prose-invert max-w-none
+            prose-h1:text-3xl prose-h1:font-bold
+            prose-h2:text-2xl prose-h2:font-semibold
+            prose-h3:text-xl prose-h3:font-semibold
+            prose-p:text-base prose-p:text-[var(--color-text)]
+            prose-li:text-[var(--color-text)]
 
-          [&_ul]:list-disc
-          [&_ul]:pl-6
-          [&_ol]:list-decimal
-          [&_ol]:pl-6
-          [&_li]:list-item
+            [&_ul]:list-disc
+            [&_ul]:pl-6
+            [&_ol]:list-decimal
+            [&_ol]:pl-6
+            [&_li]:list-item
 
-          [&_.deus-img]:max-w-full
-          [&_.deus-img]:h-auto
-          [&_.deus-img]:rounded-xl
-          [&_.deus-img]:border
-          [&_.deus-img]:border-white/10
+            [&_.deus-img]:max-w-full
+            [&_.deus-img]:h-auto
+            [&_.deus-img]:rounded-xl
+            [&_.deus-img]:border
+            [&_.deus-img]:border-[var(--border-main)]
 
-          [&_.deus-link]:underline
-          [&_.deus-link]:underline-offset-4
-          [&_.deus-link]:text-sky-300
-          [&_.deus-link:hover]:text-sky-200
-        "
-      />
+            [&_.deus-link]:underline
+            [&_.deus-link]:underline-offset-4
+            [&_.deus-link]:text-sky-600 dark:text-sky-300
+            [&_.deus-link:hover]:text-sky-700 dark:text-sky-200
+          "
+        />
       </div>
 
       {/* Link Modal (✅ back to your version) */}
@@ -507,23 +507,23 @@ export default function RichEditor({
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60" onClick={closeLinkModal} />
 
-          <div className="relative w-full max-w-md rounded-xl border border-white/10 bg-neutral-950 text-white shadow-xl">
-            <div className="p-4 border-b border-white/10">
+          <div className="relative w-full max-w-md rounded-xl border border-[var(--border-main)] bg-[var(--bg-card)] text-[var(--color-text)] shadow-xl">
+            <div className="p-4 border-b border-[var(--border-main)]">
               <div className="text-sm font-semibold">Insert / Edit Link</div>
-              <div className="text-xs text-white/60 mt-1">
-                Shortcut: <span className="text-white/80">{shortcutLabel}</span>
+              <div className="text-xs text-[var(--color-muted)] mt-1">
+                Shortcut: <span className="text-[var(--color-text)]/80">{shortcutLabel}</span>
               </div>
             </div>
 
             <div className="p-4 space-y-3">
               <div>
-                <div className="text-xs text-white/60 mb-1">URL</div>
+                <div className="text-xs text-[var(--color-muted)] mb-1">URL</div>
                 <input
                   ref={linkInputRef}
                   value={linkUrl}
                   onChange={(e) => setLinkUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
+                  className="w-full rounded-md px-3 py-2 text-sm outline-none bg-[var(--bg-surface)] border border-[var(--border-main)] placeholder:text-[var(--color-muted)] focus:ring-2"
                   style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.10)" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") applyLink();
@@ -534,12 +534,12 @@ export default function RichEditor({
 
               {/* Optional text for empty selection */}
               <div>
-                <div className="text-xs text-white/60 mb-1">Text (optional)</div>
+                <div className="text-xs text-[var(--color-muted)] mb-1">Text (optional)</div>
                 <input
                   value={linkText}
                   onChange={(e) => setLinkText(e.target.value)}
                   placeholder="Text yang ditampilkan (kalau tidak pilih teks)"
-                  className="w-full rounded-md px-3 py-2 text-sm outline-none bg-white/5 border border-white/10 placeholder:text-white/40 focus:ring-2"
+                  className="w-full rounded-md px-3 py-2 text-sm outline-none bg-[var(--bg-surface)] border border-[var(--border-main)] placeholder:text-[var(--color-muted)] focus:ring-2"
                   style={{ boxShadow: "0 0 0 2px rgba(241,196,15,0.06)" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") applyLink();
@@ -548,19 +548,19 @@ export default function RichEditor({
                 />
               </div>
 
-              <div className="text-[11px] text-white/50">
+              <div className="text-[11px] text-[var(--color-muted)]">
                 Tips: pilih teks dulu lalu tekan {shortcutLabel} untuk edit link pada teks itu.
               </div>
             </div>
 
-            <div className="p-4 border-t border-white/10 flex justify-end gap-2">
+            <div className="p-4 border-t border-[var(--border-main)] flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   editor.chain().focus().extendMarkRange("link").unsetLink().run();
                   closeLinkModal();
                 }}
-                className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10 text-red-200"
+                className="px-3 py-2 text-sm rounded-md border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)] text-red-500"
                 title="Remove link"
               >
                 Remove
@@ -569,7 +569,7 @@ export default function RichEditor({
               <button
                 type="button"
                 onClick={closeLinkModal}
-                className="px-3 py-2 text-sm rounded-md border border-white/15 hover:bg-white/10"
+                className="px-3 py-2 text-sm rounded-md border border-[var(--border-main)] hover:bg-[var(--sidebar-hover)]"
               >
                 Cancel
               </button>

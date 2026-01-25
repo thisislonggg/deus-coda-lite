@@ -6,6 +6,43 @@
 :root{
   --dc-primary: 241 196 15;
   --dc-dark: 11 15 25;
+  
+  /* Sidebar specific variables - Light mode */
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #000000; /* Hitam untuk light mode */
+  --sidebar-text-muted: #000000; /* Hitam juga untuk light mode (tidak pucat) */
+  --sidebar-border: rgba(0, 0, 0, 0.12);
+  --sidebar-hover: rgba(0, 0, 0, 0.05);
+  --sidebar-active: rgba(241, 196, 15, 0.14);
+  
+  /* Main content variables - Light mode */
+  --color-bg: #ffffff;
+  --color-text: #000000;
+  --color-muted: #666666;
+  --border-main: rgba(0, 0, 0, 0.12);
+  --bg-card: #f8f9fa;
+  --bg-surface: #ffffff;
+}
+
+/* ===============================
+   Dark mode overrides
+   =============================== */
+html.dark{
+  /* Sidebar specific variables - Dark mode */
+  --sidebar-bg: linear-gradient(180deg, rgb(2 6 23) 0%, rgb(17 24 39) 55%, rgb(2 6 23) 100%);
+  --sidebar-text: #ffffff; /* Putih untuk dark mode */
+  --sidebar-text-muted: rgba(255, 255, 255, 0.65); /* Putih transparan untuk dark mode */
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-hover: rgba(255, 255, 255, 0.1);
+  --sidebar-active: rgba(241, 196, 15, 0.14);
+  
+  /* Main content variables - Dark mode */
+  --color-bg: #020617;
+  --color-text: #ffffff;
+  --color-muted: rgba(255, 255, 255, 0.65);
+  --border-main: rgba(255, 255, 255, 0.12);
+  --bg-card: #0b1220;
+  --bg-surface: #020617;
 }
 
 /* ===============================
@@ -48,6 +85,27 @@
   .dc-pill {
     @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold;
   }
+  
+  /* Sidebar utility classes */
+  .sidebar-text {
+    color: var(--sidebar-text);
+  }
+  
+  .sidebar-text-muted {
+    color: var(--sidebar-text-muted);
+  }
+  
+  .sidebar-border {
+    border-color: var(--sidebar-border);
+  }
+  
+  .sidebar-hover:hover {
+    background-color: var(--sidebar-hover);
+  }
+  
+  .sidebar-active {
+    background-color: var(--sidebar-active);
+  }
 }
 
 /* ===============================
@@ -72,6 +130,7 @@
   font-weight: 700;
   margin-top: 1.4em;
   margin-bottom: 0.6em;
+  color: var(--color-text);
 }
 
 .ProseMirror h2 {
@@ -80,6 +139,7 @@
   font-weight: 600;
   margin-top: 1.2em;
   margin-bottom: 0.5em;
+  color: var(--color-text);
 }
 
 .ProseMirror h3 {
@@ -88,6 +148,7 @@
   font-weight: 600;
   margin-top: 1em;
   margin-bottom: 0.4em;
+  color: var(--color-text);
 }
 
 /* Paragraph */
@@ -95,6 +156,7 @@
   font-size: 1rem;
   line-height: 1.75;
   margin: 0.5em 0;
+  color: var(--color-text);
 }
 
 /* Placeholder */
@@ -110,19 +172,21 @@
 .ProseMirror {
   outline: none;
   min-height: 180px;
+  color: var(--color-text);
 }
 
 /* placeholder tiptap */
 .ProseMirror p.is-editor-empty:first-child::before {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-muted);
   content: attr(data-placeholder);
   float: left;
   height: 0;
   pointer-events: none;
 }
+
 /* Preview HTML styling (tanpa tailwind typography) */
 .dc-content {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--color-text);
   line-height: 1.7;
   font-size: 16px;
 }
@@ -132,7 +196,7 @@
   font-weight: 800;
   line-height: 1.15;
   margin: 18px 0 10px;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .dc-content h2 {
@@ -140,7 +204,7 @@
   font-weight: 700;
   line-height: 1.2;
   margin: 16px 0 8px;
-  color: #fff;
+  color: var(--color-text);
 }
 
 .dc-content h3 {
@@ -148,11 +212,12 @@
   font-weight: 700;
   line-height: 1.25;
   margin: 14px 0 6px;
-  color: rgba(255, 255, 255, 0.95);
+  color: var(--color-text);
 }
 
 .dc-content p {
   margin: 10px 0;
+  color: var(--color-text);
 }
 
 .dc-content ul,
@@ -162,16 +227,39 @@
 
 .dc-content li {
   margin: 6px 0;
+  color: var(--color-text);
 }
 
 .dc-content strong {
-  color: #fff;
+  color: var(--color-text);
 }
 
 .dc-content a {
   color: rgb(125, 211, 252);
   text-decoration: underline;
 }
-html, body {
-  background: #020617;
-} 
+
+/* Popup styles */
+.popup-surface{
+  background:var(--bg-card);
+  color:var(--color-text)
+}
+
+html.dark .popup-surface{
+  background:linear-gradient(180deg,rgba(20,20,20,.98),rgba(2,6,23,.98));
+  color:#fff;
+}
+
+html.dark aside{
+  background:var(--sidebar-bg);
+}
+
+html.dark aside > div:first-child{
+  background:rgba(2,6,23,.7);
+}
+
+/* Ensure body takes the theme */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}

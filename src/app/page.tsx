@@ -6,13 +6,23 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-black/40 p-6 shadow-xl">
         <div className="flex flex-col items-center text-center">
+          {/* Logo untuk dark mode */}
           <Image
             src="/logo-deus.webp"
             alt="Deus Code"
             width={72}
             height={72}
             priority
-            className="rounded-xl"
+            className="rounded-xl hidden dark:block"
+          />
+          {/* Logo untuk light mode */}
+          <Image
+            src="/logo-deus-dark.webp"
+            alt="Deus Code"
+            width={72}
+            height={72}
+            priority
+            className="rounded-xl block dark:hidden"
           />
           <h1 className="mt-4 text-2xl font-semibold text-white">Deus Code</h1>
           <p className="mt-1 text-sm text-white/70">SOP & Admin Docs</p>
@@ -31,10 +41,6 @@ export default function Home() {
           >
             Sign Up
           </Link>
-        </div>
-
-        <div className="mt-5 text-center text-xs text-white/50">
-          Akses editor hanya untuk Admin/Editor.
         </div>
       </div>
     </main>

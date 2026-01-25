@@ -6,6 +6,25 @@ import SidebarTree from "../../components/SidebarTree";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
 
+  // Sync tema dengan localStorage
+  useEffect(() => {
+    const handleThemeChange = () => {
+      const theme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(theme);
+    };
+
+    // Listen for storage events (when theme changes in another tab)
+    window.addEventListener('storage', handleThemeChange);
+    
+    // Initial sync
+    handleThemeChange();
+    
+    return () => {
+      window.removeEventListener('storage', handleThemeChange);
+    };
+  }, []);
+
   // ESC untuk tutup drawer
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -18,16 +37,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Kalau resize ke desktop, auto tutup drawer
   useEffect(() => {
     function onResize() {
-      if (window.innerWidth >= 768) setOpen(false); // md breakpoint
+      if (window.innerWidth >= 768) setOpen(false);
     }
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-950 text-white">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
       {/* Topbar (mobile only) */}
-      <div className="md:hidden sticky top-0 z-[60] border-b border-white/10 bg-slate-950/80 backdrop-blur">
+      <div className="md:hidden sticky top-0 z-[60] border-b border-[var(--border-main)] bg-[var(--bg-main)]/80 backdrop-blur">
         <div className="h-14 px-4 flex items-center justify-between">
           <button
             type="button"
@@ -38,7 +57,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-sm font-semibold">Menu</span>
           </button>
 
-          <div className="text-sm text-white/70 truncate max-w-[60%]">
+          <div className="text-sm text-[var(--text-muted)] truncate max-w-[60%]">
             Deus Coda Lite
           </div>
         </div>
@@ -48,7 +67,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Sidebar (desktop only) */}
         <div className="hidden md:block w-[320px] shrink-0 sticky top-0 h-screen">
           <div className="h-screen overflow-hidden">
-            {/* @ts-ignore */}
             <SidebarTree />
           </div>
         </div>
@@ -64,9 +82,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* drawer */}
             <div className="fixed inset-y-0 left-0 z-[80] w-[320px] max-w-[85vw]">
-              <div className="h-full bg-slate-950 border-r border-white/10">
-                <div className="flex items-center justify-between px-3 py-3 border-b border-white/10">
-                  <div className="text-sm font-semibold text-white/80">
+              <div className="h-full bg-[var(--bg-main)] border-r border-[var(--border-main)]">
+                <div className="flex items-center justify-between px-3 py-3 border-b border-[var(--border-main)]">
+                  <div className="text-sm font-semibold text-[var(--text-muted)]">
                     Navigation
                   </div>
                   <button
@@ -79,7 +97,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <div className="h-[calc(100vh-52px)] overflow-hidden">
-                  {/* @ts-ignore */}
                   <SidebarTree />
                 </div>
               </div>
@@ -88,8 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Konten kanan yang scroll */}
-        <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-slate-950">
-          {/* padding responsif biar enak di mobile */}
+        <main className="flex-1 min-w-0 h-screen overflow-y-auto bg-[var(--bg-main)]">
           <div className="px-4 md:px-6 py-4 md:py-6">{children}</div>
         </main>
       </div>
