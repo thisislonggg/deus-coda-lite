@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 import FolderContentsGrid from "@/components/FolderContentsGrid";
 import RichEditor from "@/components/RichEditor";
-import MarkdownView from "@/components/MarkdownView";
+import { debounce } from "lodash";
 
 // role
 import { AppRole, getMyRoleBrowser, canEdit } from "@/lib/role.client";
@@ -17,10 +17,10 @@ type PageRow = {
   title: string;
   slug: string;
   type: PageType;
-  icon?: string | null;          // ✅ NEW
-  content_md?: string | null;    // HTML notes
+  icon?: string | null;
+  content_md?: string | null;
   status?: string | null;
-  external_url?: string | null;  // link url
+  external_url?: string | null;
 };
 
 function toEmbeddableGoogleUrl(url: string) {
@@ -50,6 +50,82 @@ const ICON_PRESETS: Record<PageType | "general", string[]> = {
   general: ["⭐", "🔥", "💡", "🎯", "🧰", "🧪", "🚀", "📌", "🧷", "✅"],
 };
 
+// Fungsi untuk mengkonversi warna konten berdasarkan tema
+function convertColorsForTheme(html: string, toDarkMode: boolean): string {
+  if (!html) return html;
+  
+  if (toDarkMode) {
+    // Light → Dark
+    return html
+      .replace(/color:\s*#30A230/gi, 'color: #ABF4AB')
+      .replace(/color:\s*#B43A40/gi, 'color: #DF9094')
+      .replace(/color:\s*#E9BC00/gi, 'color: #F0DC88')
+      .replace(/color:\s*#787878/gi, 'color: #D5D5C9')
+      .replace(/color:\s*#191919/gi, 'color: #FFFFFF')
+      .replace(/color:\s*#30a230/gi, 'color: #ABF4AB')
+      .replace(/color:\s*#b43a40/gi, 'color: #DF9094')
+      .replace(/color:\s*#e9bc00/gi, 'color: #F0DC88');
+  } else {
+    // Dark → Light
+    return html
+      .replace(/color:\s*#ABF4AB/gi, 'color: #30A230')
+      .replace(/color:\s*#DF9094/gi, 'color: #B43A40')
+      .replace(/color:\s*#F0DC88/gi, 'color: #E9BC00')
+      .replace(/color:\s*#D5D5C9/gi, 'color: #787878')
+      .replace(/color:\s*#FFFFFF/gi, 'color: #191919')
+      .replace(/color:\s*#abf4ab/gi, 'color: #30A230')
+      .replace(/color:\s*#df9094/gi, 'color: #B43A40')
+      .replace(/color:\s*#f0dc88/gi, 'color: #E9BC00');
+  }
+}
+
+// CSS untuk override warna berdasarkan tema
+const getColorOverrideCSS = (isDarkMode: boolean) => {
+  if (isDarkMode) {
+    return `
+      .theme-color-override [style*="color: #30A230"],
+      .theme-color-override [style*="color:#30A230"],
+      .theme-color-override [style*="color: #30a230"],
+      .theme-color-override [style*="color:#30a230"] { color: #ABF4AB !important; }
+      .theme-color-override [style*="color: #B43A40"],
+      .theme-color-override [style*="color:#B43A40"],
+      .theme-color-override [style*="color: #b43a40"],
+      .theme-color-override [style*="color:#b43a40"] { color: #DF9094 !important; }
+      .theme-color-override [style*="color: #E9BC00"],
+      .theme-color-override [style*="color:#E9BC00"],
+      .theme-color-override [style*="color: #e9bc00"],
+      .theme-color-override [style*="color:#e9bc00"] { color: #F0DC88 !important; }
+      .theme-color-override [style*="color: #787878"],
+      .theme-color-override [style*="color:#787878"] { color: #D5D5C9 !important; }
+      .theme-color-override [style*="color: #191919"],
+      .theme-color-override [style*="color:#191919"] { color: #FFFFFF !important; }
+    `;
+  } else {
+    return `
+      .theme-color-override [style*="color: #ABF4AB"],
+      .theme-color-override [style*="color:#ABF4AB"],
+      .theme-color-override [style*="color: #abf4ab"],
+      .theme-color-override [style*="color:#abf4ab"] { color: #30A230 !important; }
+      .theme-color-override [style*="color: #DF9094"],
+      .theme-color-override [style*="color:#DF9094"],
+      .theme-color-override [style*="color: #df9094"],
+      .theme-color-override [style*="color:#df9094"] { color: #B43A40 !important; }
+      .theme-color-override [style*="color: #F0DC88"],
+      .theme-color-override [style*="color:#F0DC88"],
+      .theme-color-override [style*="color: #f0dc88"],
+      .theme-color-override [style*="color:#f0dc88"] { color: #E9BC00 !important; }
+      .theme-color-override [style*="color: #D5D5C9"],
+      .theme-color-override [style*="color:#D5D5C9"],
+      .theme-color-override [style*="color: #d5d5c9"],
+      .theme-color-override [style*="color:#d5d5c9"] { color: #787878 !important; }
+      .theme-color-override [style*="color: #FFFFFF"],
+      .theme-color-override [style*="color:#FFFFFF"],
+      .theme-color-override [style*="color: #ffffff"],
+      .theme-color-override [style*="color:#ffffff"] { color: #191919 !important; }
+    `;
+  }
+};
+
 export default function PageView() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
@@ -66,7 +142,11 @@ export default function PageView() {
 
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const timerRef = useRef<number | null>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
+  const styleElementRef = useRef<HTMLStyleElement | null>(null);
 
   const allowEdit = canEdit(role);
 
@@ -78,22 +158,79 @@ export default function PageView() {
   const iconPopupRef = useRef<HTMLDivElement>(null);
   const iconButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Theme detection
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [themeChangeCount, setThemeChangeCount] = useState(0);
+
   function flash(msg: string) {
     setSaveMsg(msg);
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setSaveMsg(null), 2000);
   }
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-    };
-  }, []);
+  // Auto-save function
+  const saveContent = useCallback(async () => {
+    if (!page || !allowEdit || !dirty) return;
+
+    setSaving(true);
+    console.log("Auto-saving...");
+
+    // Always save in dark mode format for consistency
+    const contentToSave = isDarkMode ? draftContent : convertColorsForTheme(draftContent, true);
+
+    const { error } = await supabase
+      .from("pages")
+      .update({ 
+        content_md: contentToSave,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", page.id);
+
+    setSaving(false);
+
+    if (error) {
+      console.error("Auto-save failed:", error.message);
+      flash(`Auto-save gagal: ${error.message}`);
+      return;
+    }
+
+    setPage((prev) => (prev ? { ...prev, content_md: contentToSave } : prev));
+    setDirty(false);
+    setLastSaveTime(new Date());
+    console.log("Auto-save successful");
+  }, [page, allowEdit, dirty, draftContent, isDarkMode, supabase]);
+
+  // Debounced auto-save
+  const debouncedSave = useCallback(
+    debounce(() => {
+      if (autoSaveEnabled && allowEdit && dirty) {
+        saveContent();
+      }
+    }, 3000), // Auto-save after 3 seconds of inactivity
+    [autoSaveEnabled, allowEdit, dirty, saveContent]
+  );
+
+  // Manual save function
+  const handleSave = useCallback(async () => {
+    if (!page) return;
+
+    if (!allowEdit) {
+      flash("Anda tidak punya izin untuk edit.");
+      return;
+    }
+
+    if (!dirty) {
+      flash("Tidak ada perubahan.");
+      return;
+    }
+
+    await saveContent();
+    flash("Saved ✅");
+  }, [page, allowEdit, dirty, saveContent]);
 
   // Effect untuk menutup popup icon ketika klik di luar
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      // Jika popup terbuka dan klik di luar popup DAN di luar tombol icon
       if (iconOpen && 
           iconPopupRef.current && 
           !iconPopupRef.current.contains(event.target as Node) &&
@@ -103,14 +240,93 @@ export default function PageView() {
       }
     }
     
-    // Tambahkan event listener
     document.addEventListener("mousedown", handleClickOutside);
     
-    // Cleanup
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [iconOpen]); // Hanya re-run ketika iconOpen berubah
+  }, [iconOpen]);
+
+  // Deteksi tema dan apply CSS override
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+      
+      // Apply CSS override
+      if (!styleElementRef.current) {
+        styleElementRef.current = document.createElement('style');
+        document.head.appendChild(styleElementRef.current);
+      }
+      
+      styleElementRef.current.innerHTML = getColorOverrideCSS(isDark);
+      
+      // Force re-render untuk preview mode
+      if (mode === 'preview') {
+        setThemeChangeCount(prev => prev + 1);
+      }
+    };
+
+    // Check initial theme
+    checkTheme();
+
+    // Observe theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const wasDark = isDarkMode;
+          const isNowDark = document.documentElement.classList.contains('dark');
+          
+          if (wasDark !== isNowDark) {
+            checkTheme();
+          }
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => {
+      observer.disconnect();
+      if (styleElementRef.current) {
+        document.head.removeChild(styleElementRef.current);
+        styleElementRef.current = null;
+      }
+    };
+  }, [isDarkMode, mode]);
+
+  // Setup auto-save
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        window.clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Trigger auto-save on content change
+  useEffect(() => {
+    if (autoSaveEnabled && dirty) {
+      debouncedSave();
+    }
+    
+    return () => {
+      debouncedSave.cancel();
+    };
+  }, [draftContent, autoSaveEnabled, dirty, debouncedSave]);
+
+  // Auto-save interval (every 30 seconds if dirty)
+  useEffect(() => {
+    if (!autoSaveEnabled || !allowEdit) return;
+
+    const interval = setInterval(() => {
+      if (dirty) {
+        saveContent();
+      }
+    }, 30000); // Save every 30 seconds if there are changes
+
+    return () => clearInterval(interval);
+  }, [autoSaveEnabled, allowEdit, dirty, saveContent]);
 
   // load role
   useEffect(() => {
@@ -134,7 +350,7 @@ export default function PageView() {
 
       const { data, error } = await supabase
         .from("pages")
-        .select("id,title,slug,type,icon,content_md,status,external_url") // ✅ icon added
+        .select("id,title,slug,type,icon,content_md,status,external_url")
         .eq("slug", slug)
         .maybeSingle();
 
@@ -150,8 +366,10 @@ export default function PageView() {
       }
 
       const p = (data ?? null) as PageRow | null;
+      
+      // Set draft content from database
+      setDraftContent(p?.content_md || "");
       setPage(p);
-      setDraftContent(p?.content_md ?? "");
       setDirty(false);
       setLoading(false);
     }
@@ -162,35 +380,11 @@ export default function PageView() {
     };
   }, [slug, supabase]);
 
-  async function handleSave() {
-    if (!page) return;
-
-    if (!allowEdit) {
-      flash("Anda tidak punya izin untuk edit.");
-      return;
-    }
-
-    if (!dirty) {
-      flash("Tidak ada perubahan.");
-      return;
-    }
-
-    setSaving(true);
-    setSaveMsg(null);
-
-    const { error } = await supabase.from("pages").update({ content_md: draftContent }).eq("id", page.id);
-
-    setSaving(false);
-
-    if (error) {
-      setSaveMsg(`Gagal save: ${error.message}`);
-      return;
-    }
-
-    setPage((prev) => (prev ? { ...prev, content_md: draftContent } : prev));
-    setDirty(false);
-    flash("Saved ✅");
-  }
+  // Handler untuk perubahan konten
+  const handleContentChange = useCallback((nextHtml: string) => {
+    setDraftContent(nextHtml);
+    setDirty(true);
+  }, []);
 
   async function updateIcon(next: string | null) {
     if (!page) return;
@@ -205,8 +399,14 @@ export default function PageView() {
 
     setPage((p) => (p ? { ...p, icon: next } : p));
     flash("Icon updated ✅");
-    setIconOpen(false); // Tutup popup setelah icon di-update
+    setIconOpen(false);
   }
+
+  // Toggle auto-save
+  const toggleAutoSave = () => {
+    setAutoSaveEnabled(!autoSaveEnabled);
+    flash(`Auto-save ${!autoSaveEnabled ? 'diaktifkan' : 'dinonaktifkan'}`);
+  };
 
   // loading states
   if (loading) {
@@ -318,10 +518,17 @@ export default function PageView() {
           {/* Title + meta */}
           <div className="min-w-0">
             <div className="text-3xl font-bold text-[var(--color-text)] truncate">{page.title}</div>
-            <div className="text-sm text-[var(--color-muted)] mt-1">
-              {isFolder ? "Folder" : isLink ? "Google Link" : "Page"} •{" "}
-              {page.status === "draft" ? "Draft" : "Published"} •{" "}
-              {dirty ? <span className="text-yellow-600 dark:text-yellow-300/90">Unsaved</span> : <span className="text-emerald-600 dark:text-emerald-300/90">Saved</span>}
+            <div className="text-sm text-[var(--color-muted)] mt-1 flex flex-wrap items-center gap-2">
+              <span>{isFolder ? "Folder" : isLink ? "Google Link" : "Page"} • {page.status === "draft" ? "Draft" : "Published"}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs ${dirty ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-300/90' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300/90'}`}>
+                {dirty ? "Unsaved" : "Saved"}
+              </span>
+              {lastSaveTime && (
+                <span className="text-xs text-[var(--color-muted)]">
+                  Terakhir disimpan: {lastSaveTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+              {saving && <span className="text-xs text-blue-500 animate-pulse">Menyimpan...</span>}
             </div>
           </div>
         </div>
@@ -329,6 +536,18 @@ export default function PageView() {
         {/* Buttons (edit only for admin/editor) */}
         {allowEdit && (
           <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1 mr-2">
+              <button
+                type="button"
+                onClick={toggleAutoSave}
+                className={`px-2 py-1 rounded-md text-xs border ${autoSaveEnabled ? 'bg-green-500/20 border-green-500/30 text-green-600 dark:text-green-300' : 'bg-gray-500/20 border-gray-500/30 text-gray-600 dark:text-gray-300'}`}
+                title={autoSaveEnabled ? "Auto-save aktif" : "Auto-save nonaktif"}
+              >
+                {autoSaveEnabled ? "🔄 Auto" : "⏸️ Auto"}
+              </button>
+              <span className="text-xs text-[var(--color-muted)]">{autoSaveEnabled ? "ON" : "OFF"}</span>
+            </div>
+
             <button
               type="button"
               className={`px-3 py-2 rounded-md text-sm border transition ${
@@ -354,15 +573,19 @@ export default function PageView() {
               className="px-3 py-2 rounded-md text-sm font-semibold disabled:opacity-60"
               style={{ backgroundColor: "rgb(var(--dc-primary))", color: "rgb(var(--dc-dark))" }}
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !dirty}
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Saving..." : "Save Now"}
             </button>
           </div>
         )}
       </div>
 
-      {saveMsg && <div className="text-xs text-[var(--color-text)]/70 mb-4">{saveMsg}</div>}
+      {saveMsg && (
+        <div className="mb-4 p-2 rounded-md bg-[var(--bg-card)] border border-[var(--border-main)]">
+          <div className="text-sm text-[var(--color-text)]/80">{saveMsg}</div>
+        </div>
+      )}
 
       {/* Folder cards */}
       {isFolder && (
@@ -404,33 +627,25 @@ export default function PageView() {
 
       {/* Notes / Content */}
       <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 min-w-0">
-        <div className="text-sm font-semibold text-[var(--color-text)] mb-3">{isFolder ? "Catatan Folder" : isLink ? "Catatan Link" : "Konten"}</div>
 
         {allowEdit && mode === "edit" ? (
           <RichEditor
             value={draftContent}
             editable={true}
             uploadFolder={`pages/${page.id}`}
-            onChangeHtml={(nextHtml) => {
-              setDraftContent(nextHtml);
-              setDirty(true);
-            }}
+            onChangeHtml={handleContentChange}
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
         ) : (
           <div
-            className="
-              text-[var(--color-text)]
-              [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:my-3
-              [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:my-3
-              [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:my-3
-              [&_p]:my-2
-              [&_li]:my-1
-
-              whitespace-pre-wrap break-words [overflow-wrap:anywhere]
-              [&_pre]:overflow-x-auto
-            "
+            key={`preview-${themeChangeCount}`} // Force re-render on theme change
+            className="theme-color-override"
             dangerouslySetInnerHTML={{ __html: draftContent }}
+            style={{
+              color: 'var(--color-text)',
+              lineHeight: '1.7',
+              fontSize: '16px',
+            }}
           />
         )}
       </div>

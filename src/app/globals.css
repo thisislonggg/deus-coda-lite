@@ -258,6 +258,85 @@ html.dark aside > div:first-child{
   background:rgba(2,6,23,.7);
 }
 
+/* ===============================
+   COLOR THEME OVERRIDES FOR EDITOR
+   =============================== */
+
+/* CSS Override untuk warna teks di editor berdasarkan tema */
+/* Ini memastikan konten yang disimpan dengan warna tertentu tampil sesuai tema */
+
+/* Light Mode - Tampilkan warna Light Palette */
+html.light .ProseMirror [style*="color: #ABF4AB"],
+html.light .ProseMirror [style*="color:#ABF4AB"],
+html.light .ProseMirror [style*="color: #abf4ab"],
+html.light .ProseMirror [style*="color:#abf4ab"] {
+  color: #30A230 !important;
+}
+
+html.light .ProseMirror [style*="color: #DF9094"],
+html.light .ProseMirror [style*="color:#DF9094"],
+html.light .ProseMirror [style*="color: #df9094"],
+html.light .ProseMirror [style*="color:#df9094"] {
+  color: #B43A40 !important;
+}
+
+html.light .ProseMirror [style*="color: #F0DC88"],
+html.light .ProseMirror [style*="color:#F0DC88"],
+html.light .ProseMirror [style*="color: #f0dc88"],
+html.light .ProseMirror [style*="color:#f0dc88"] {
+  color: #E9BC00 !important;
+}
+
+html.light .ProseMirror [style*="color: #D5D5C9"],
+html.light .ProseMirror [style*="color:#D5D5C9"],
+html.light .ProseMirror [style*="color: #d5d5c9"],
+html.light .ProseMirror [style*="color:#d5d5c9"] {
+  color: #787878 !important;
+}
+
+html.light .ProseMirror [style*="color: #FFFFFF"],
+html.light .ProseMirror [style*="color:#FFFFFF"],
+html.light .ProseMirror [style*="color: #ffffff"],
+html.light .ProseMirror [style*="color:#ffffff"] {
+  color: #191919 !important;
+}
+
+/* Dark Mode - Tampilkan warna Dark Palette */
+html.dark .ProseMirror [style*="color: #30A230"],
+html.dark .ProseMirror [style*="color:#30A230"],
+html.dark .ProseMirror [style*="color: #30a230"],
+html.dark .ProseMirror [style*="color:#30a230"] {
+  color: #ABF4AB !important;
+}
+
+html.dark .ProseMirror [style*="color: #B43A40"],
+html.dark .ProseMirror [style*="color:#B43A40"],
+html.dark .ProseMirror [style*="color: #b43a40"],
+html.dark .ProseMirror [style*="color:#b43a40"] {
+  color: #DF9094 !important;
+}
+
+html.dark .ProseMirror [style*="color: #E9BC00"],
+html.dark .ProseMirror [style*="color:#E9BC00"],
+html.dark .ProseMirror [style*="color: #e9bc00"],
+html.dark .ProseMirror [style*="color:#e9bc00"] {
+  color: #F0DC88 !important;
+}
+
+html.dark .ProseMirror [style*="color: #787878"],
+html.dark .ProseMirror [style*="color:#787878"],
+html.dark .ProseMirror [style*="color: #787878"],
+html.dark .ProseMirror [style*="color:#787878"] {
+  color: #D5D5C9 !important;
+}
+
+html.dark .ProseMirror [style*="color: #191919"],
+html.dark .ProseMirror [style*="color:#191919"],
+html.dark .ProseMirror [style*="color: #191919"],
+html.dark .ProseMirror [style*="color:#191919"] {
+  color: #FFFFFF !important;
+}
+
 /* Ensure body takes the theme */
 body {
   background-color: var(--color-bg);

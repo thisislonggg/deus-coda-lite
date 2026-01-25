@@ -18,20 +18,20 @@ import { ResizableImageExtension } from "@/components/tiptap/ResizableImageExten
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 /* =========================
-   TEXT COLOR PRESET (5 only)
+   TEXT COLOR PRESETS (BERDASARKAN TEMA)
 ========================= */
-const TEXT_COLOR_PALETTE = ["#ABF4AB", "#DF9094", "#F0DC88", "#D5D5C9", "#FFFFFF"] as const;
-type TextColor = (typeof TEXT_COLOR_PALETTE)[number];
+const TEXT_COLOR_PALETTE_DARK = ["#ABF4AB", "#DF9094", "#F0DC88", "#D5D5C9", "#FFFFFF"] as const;
+const TEXT_COLOR_PALETTE_LIGHT = ["#30A230", "#B43A40", "#E9BC00", "#787878", "#191919"] as const;
+
+type TextColorDark = (typeof TEXT_COLOR_PALETTE_DARK)[number];
+type TextColorLight = (typeof TEXT_COLOR_PALETTE_LIGHT)[number];
 
 type Props = {
   value?: string; // HTML content
   editable?: boolean;
-
   onChangeHtml?: (html: string) => void;
   onChangeMarkdown?: (md: string) => void;
-
   placeholder?: string;
-
   uploadFolder?: string;
   maxImageMB?: number;
 };
@@ -43,6 +43,39 @@ function htmlToMarkdownSimple(html: string) {
 function isMac() {
   if (typeof navigator === "undefined") return false;
   return /Mac|iPhone|iPad|iPod/.test(navigator.platform);
+}
+
+// Fungsi untuk mengganti warna dalam HTML berdasarkan tema
+function convertColorsForTheme(html: string, toLightMode: boolean): string {
+  if (toLightMode) {
+    // Dark → Light
+    return html
+      .replace(/color:\s*#ABF4AB/gi, 'color: #30A230')
+      .replace(/color:\s*#DF9094/gi, 'color: #B43A40')
+      .replace(/color:\s*#F0DC88/gi, 'color: #E9BC00')
+      .replace(/color:\s*#D5D5C9/gi, 'color: #787878')
+      .replace(/color:\s*#FFFFFF/gi, 'color: #191919')
+      // Handle lowercase variants
+      .replace(/color:\s*#abf4ab/gi, 'color: #30A230')
+      .replace(/color:\s*#df9094/gi, 'color: #B43A40')
+      .replace(/color:\s*#f0dc88/gi, 'color: #E9BC00')
+      .replace(/color:\s*#d5d5c9/gi, 'color: #787878')
+      .replace(/color:\s*#ffffff/gi, 'color: #191919');
+  } else {
+    // Light → Dark
+    return html
+      .replace(/color:\s*#30A230/gi, 'color: #ABF4AB')
+      .replace(/color:\s*#B43A40/gi, 'color: #DF9094')
+      .replace(/color:\s*#E9BC00/gi, 'color: #F0DC88')
+      .replace(/color:\s*#787878/gi, 'color: #D5D5C9')
+      .replace(/color:\s*#191919/gi, 'color: #FFFFFF')
+      // Handle lowercase variants
+      .replace(/color:\s*#30a230/gi, 'color: #ABF4AB')
+      .replace(/color:\s*#b43a40/gi, 'color: #DF9094')
+      .replace(/color:\s*#e9bc00/gi, 'color: #F0DC88')
+      .replace(/color:\s*#787878/gi, 'color: #D5D5C9')
+      .replace(/color:\s*#191919/gi, 'color: #FFFFFF');
+  }
 }
 
 export default function RichEditor({
@@ -60,17 +93,26 @@ export default function RichEditor({
   const [imgUploading, setImgUploading] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
 
-  // Link modal state (✅ back to your version)
+  // Link modal state
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkText, setLinkText] = useState("");
   const linkInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Text color state (✅ preset only)
-  const [textColor, setTextColor] = useState<TextColor>(TEXT_COLOR_PALETTE[0]);
+  // Theme detection
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [initialThemeChecked, setInitialThemeChecked] = useState(false);
 
-  // Highlight state (unchanged)
-  const [hlColor, setHlColor] = useState("#fde047"); // yellow-ish
+  // Text color state
+  const [textColor, setTextColor] = useState<string>("#ABF4AB");
+
+  // Highlight state
+  const [hlColor, setHlColor] = useState("#fde047");
+
+  // Get active color palette based on theme
+  const activeColorPalette = useMemo(() => {
+    return isDarkMode ? TEXT_COLOR_PALETTE_DARK : TEXT_COLOR_PALETTE_LIGHT;
+  }, [isDarkMode]);
 
   const editor = useEditor({
     extensions: [
@@ -115,10 +157,85 @@ export default function RichEditor({
     immediatelyRender: false,
     onUpdate({ editor }) {
       const html = editor.getHTML();
-      if (typeof onChangeHtml === "function") onChangeHtml(html);
-      if (typeof onChangeMarkdown === "function") onChangeMarkdown(htmlToMarkdownSimple(html));
+      if (typeof onChangeHtml === "function") {
+        // Konversi warna sebelum dikirim ke parent
+        const convertedHtml = convertColorsForTheme(html, !isDarkMode);
+        onChangeHtml(convertedHtml);
+      }
+      if (typeof onChangeMarkdown === "function") {
+        onChangeMarkdown(htmlToMarkdownSimple(html));
+      }
     },
   });
+
+  // Detect theme changes
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
+      
+      // Set initial text color based on theme
+      if (!initialThemeChecked && activeColorPalette.length > 0) {
+        setTextColor(activeColorPalette[0]);
+        setInitialThemeChecked(true);
+      }
+    };
+
+    // Check initial theme
+    checkTheme();
+
+    // Observe theme changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          checkTheme();
+        }
+      });
+    });
+
+    observer.observe(document.documentElement, { attributes: true });
+
+    return () => observer.disconnect();
+  }, [initialThemeChecked, activeColorPalette]);
+
+  // Update text color when theme changes
+  useEffect(() => {
+    if (!editor || !initialThemeChecked) return;
+    
+    const newPalette = isDarkMode ? TEXT_COLOR_PALETTE_DARK : TEXT_COLOR_PALETTE_LIGHT;
+    
+    // Jika warna saat ini tidak ada di palette baru, reset ke warna pertama palette
+    if (textColor && !newPalette.includes(textColor as any)) {
+      setTextColor(newPalette[0]);
+    }
+  }, [isDarkMode, editor, textColor, initialThemeChecked]);
+
+  // Convert content colors when theme changes
+  useEffect(() => {
+    if (!editor || !initialThemeChecked) return;
+    
+    const currentHtml = editor.getHTML();
+    const convertedHtml = convertColorsForTheme(currentHtml, !isDarkMode);
+    
+    // Only update if content actually changed
+    if (currentHtml !== convertedHtml) {
+      // Save current selection
+      const { from, to } = editor.state.selection;
+      
+      // Update content
+      editor.commands.setContent(convertedHtml, false);
+      
+      // Try to restore selection (if still valid)
+      try {
+        if (from <= editor.state.doc.content.size && to <= editor.state.doc.content.size) {
+          editor.commands.setTextSelection({ from, to });
+        }
+      } catch (e) {
+        // If selection is invalid, just focus the editor
+        editor.commands.focus();
+      }
+    }
+  }, [isDarkMode, editor, initialThemeChecked]);
 
   // sync editable changes
   useEffect(() => {
@@ -128,14 +245,18 @@ export default function RichEditor({
 
   // sync external value changes
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !initialThemeChecked) return;
     const current = editor.getHTML();
-    if (value !== current) {
-      editor.commands.setContent(value, { parseOptions: { preserveWhitespace: false } });
+    
+    // Konversi value yang masuk agar sesuai dengan tema saat ini
+    const convertedValue = convertColorsForTheme(value, !isDarkMode);
+    
+    if (convertedValue !== current) {
+      editor.commands.setContent(convertedValue, { parseOptions: { preserveWhitespace: false } });
     }
-  }, [editor, value]);
+  }, [editor, value, isDarkMode, initialThemeChecked]);
 
-  // Ctrl/Cmd + K shortcut (✅ back to your version)
+  // Ctrl/Cmd + K shortcut
   useEffect(() => {
     if (!editor) return;
 
@@ -156,7 +277,6 @@ export default function RichEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
-  // ✅ back to your version
   function openLinkModalFromSelection() {
     if (!editor) return;
 
@@ -175,14 +295,12 @@ export default function RichEditor({
     setTimeout(() => linkInputRef.current?.focus(), 50);
   }
 
-  // ✅ back to your version
   function closeLinkModal() {
     setLinkOpen(false);
     setLinkUrl("");
     setLinkText("");
   }
 
-  // ✅ back to your version
   function applyLink() {
     if (!editor) return;
 
@@ -277,18 +395,18 @@ export default function RichEditor({
     fileInputRef.current?.click();
   }
 
-  // ✅ preset only
-  function setTextColorCmd(hex: TextColor) {
+  // Set text color dengan warna dari palette aktif
+  function setTextColorCmd(hex: string) {
     if (!editor) return;
     setTextColor(hex);
     editor.chain().focus().setColor(hex).run();
   }
 
-  // ✅ preset reset to default
+  // Reset to default color berdasarkan tema
   function unsetTextColorCmd() {
     if (!editor) return;
-    const defaultColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim() || '#000000';
-    setTextColor(defaultColor as TextColor);
+    const defaultColor = getComputedStyle(document.documentElement).getPropertyValue('--color-text').trim() || (isDarkMode ? '#ffffff' : '#000000');
+    setTextColor(defaultColor);
     editor.chain().focus().unsetColor().run();
   }
 
@@ -373,12 +491,12 @@ export default function RichEditor({
 
         <div className="w-px h-6 bg-[var(--border-main)] mx-1" />
 
-        {/* ✅ Text Color (5 presets only) */}
+        {/* ✅ Text Color (5 presets based on theme) */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-[var(--color-muted)]">Text</span>
 
           <div className="flex items-center gap-1">
-            {TEXT_COLOR_PALETTE.map((c) => {
+            {activeColorPalette.map((c) => {
               const active = textColor.toLowerCase() === c.toLowerCase();
               return (
                 <button
@@ -430,7 +548,7 @@ export default function RichEditor({
 
         <div className="w-px h-6 bg-[var(--border-main)] mx-1" />
 
-        {/* Link (✅ back to your version) */}
+        {/* Link */}
         <button
           type="button"
           onClick={openLinkModalFromSelection}
@@ -502,7 +620,7 @@ export default function RichEditor({
         />
       </div>
 
-      {/* Link Modal (✅ back to your version) */}
+      {/* Link Modal */}
       {linkOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60" onClick={closeLinkModal} />
