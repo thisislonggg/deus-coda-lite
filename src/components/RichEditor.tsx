@@ -227,8 +227,9 @@ if (textColor) {
       const { from, to } = editor.state.selection;
       
       // Update content
-      editor.commands.setContent(convertedHtml, false);
-      
+editor.commands.setContent(convertedHtml, {
+  emitUpdate: false,
+});
       // Try to restore selection (if still valid)
       try {
         if (from <= editor.state.doc.content.size && to <= editor.state.doc.content.size) {
