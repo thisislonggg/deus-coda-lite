@@ -17,6 +17,7 @@ import ListItem from "@tiptap/extension-list-item";
 import { ResizableImageExtension } from "@/components/tiptap/ResizableImageExtension";
 import { createSupabaseBrowser } from "@/lib/supabaseBrowser";
 
+
 /* =========================
    TEXT COLOR PRESETS (BERDASARKAN TEMA)
 ========================= */

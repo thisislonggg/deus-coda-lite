@@ -9,8 +9,8 @@
   
   /* Sidebar specific variables - Light mode */
   --sidebar-bg: #ffffff;
-  --sidebar-text: #000000; /* Hitam untuk light mode */
-  --sidebar-text-muted: #000000; /* Hitam juga untuk light mode (tidak pucat) */
+  --sidebar-text: #000000;
+  --sidebar-text-muted: #000000;
   --sidebar-border: rgba(0, 0, 0, 0.12);
   --sidebar-hover: rgba(253, 15, 15, 0.05);
   --sidebar-active: rgba(241, 196, 15, 0.14);
@@ -19,7 +19,7 @@
   --color-bg: #ffffff;
   --color-text: #000000;
   --color-muted: #000000;
-  --border-main: 000000;
+  --border-main: #000000;
   --bg-card: #f8f9fa;
   --bg-surface: #ffffff;
   --bg-popup: #ffffff;
@@ -32,167 +32,65 @@
    Dark mode overrides
    =============================== */
 html.dark{
-  /* Sidebar specific variables - Dark mode */
-  --sidebar-bg: linear-gradient(180deg, rgb(2 6 23) 0%, rgb(17 24 39) 55%, rgb(2 6 23) 100%);
-  --sidebar-text: #ffffff; /* Putih untuk dark mode */
-  --sidebar-text-muted: rgba(255, 255, 255, 0.65); /* Putih transparan untuk dark mode */
+  --sidebar-bg: linear-gradient(
+    180deg,
+    rgb(2 6 23) 0%,
+    rgb(17 24 39) 55%,
+    rgb(2 6 23) 100%
+  );
+  --sidebar-text: #ffffff;
+  --sidebar-text-muted: rgba(255, 255, 255, 0.65);
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --sidebar-hover: rgba(255, 255, 255, 0.1);
   --sidebar-active: rgba(241, 196, 15, 0.14);
   
-  /* Main content variables - Dark mode */
   --color-bg: #020617;
   --color-text: #ffffff;
   --color-muted: rgba(255, 255, 255, 0.65);
   --border-main: rgba(255, 255, 255, 0.12);
   --bg-card: #0b1220;
   --bg-surface: #020617;
-   --bg-popup: #0b1220;
+  --bg-popup: #0b1220;
   --popup-text: #e5e7eb;
-     --bg-initial: #e5e7eb;
+  --bg-initial: #e5e7eb;
   --popup-initial: #0b1220;
 }
 
 /* ===============================
-   Components (SAFE @apply)
+   Components
    =============================== */
 @layer components {
-  .dc-shell {
-    @apply min-h-screen bg-neutral-50 text-neutral-900;
-  }
-
-  .dc-card {
-    @apply rounded-xl border border-neutral-200 bg-white shadow-sm;
-  }
-
-  .dc-muted {
-    @apply text-neutral-500;
-  }
-
-  /* ❌ JANGAN pakai @apply ke class custom */
   .dc-btn {
-    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition;
+    @apply inline-flex items-center justify-center rounded-md px-3 py-2
+           text-sm font-semibold transition;
   }
 
-  .dc-btn-dark {
-    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition
-           bg-neutral-900 text-white hover:bg-neutral-800;
-  }
-
-  .dc-btn-gold {
-    @apply inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition;
-    background: rgb(var(--dc-primary));
-    color: rgb(var(--dc-dark));
-  }
-
-  .dc-input {
-    @apply w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm outline-none
-           focus:ring-2 focus:ring-neutral-200;
-  }
-
-  .dc-pill {
-    @apply inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold;
-  }
-  
-  /* Sidebar utility classes */
-  .sidebar-text {
-    color: var(--sidebar-text);
-  }
-  
-  .sidebar-text-muted {
-    color: var(--sidebar-text-muted);
-  }
-  
-  .sidebar-border {
-    border-color: var(--sidebar-border);
-  }
-  
-  .sidebar-hover:hover {
-    background-color: var(--sidebar-hover);
-  }
-  
-  .sidebar-active {
-    background-color: var(--sidebar-active);
-  }
+  .sidebar-text { color: var(--sidebar-text); }
+  .sidebar-text-muted { color: var(--sidebar-text-muted); }
+  .sidebar-border { border-color: var(--sidebar-border); }
+  .sidebar-hover:hover { background-color: var(--sidebar-hover); }
+  .sidebar-active { background-color: var(--sidebar-active); }
 }
 
 /* ===============================
-   Markdown typography
+   TipTap Editor
    =============================== */
-@layer components {
-  .md h1 { @apply text-2xl font-bold mt-6 mb-3; }
-  .md h2 { @apply text-xl font-semibold mt-5 mb-2; }
-  .md h3 { @apply text-lg font-semibold mt-4 mb-2; }
-  .md p  { @apply leading-7 text-neutral-800; }
-  .md li { @apply leading-7 text-neutral-800; }
-  .md ul { @apply list-disc ml-5; }
-  .md code { @apply font-mono text-[13px] bg-neutral-100 px-1.5 py-0.5 rounded; }
-  .md pre { @apply font-mono text-[13px] bg-neutral-900 text-white p-3 rounded-lg overflow-auto; }
-  .md hr  { @apply my-6 border-neutral-200; }
-}
-
-/* ===== TipTap Editor Headings ===== */
-.ProseMirror h1 {
-  font-size: 2.25rem; /* 36px */
-  line-height: 1.25;
-  font-weight: 700;
-  margin-top: 1.4em;
-  margin-bottom: 0.6em;
-  color: var(--color-text);
-}
-
-.ProseMirror h2 {
-  font-size: 1.75rem; /* 28px */
-  line-height: 1.3;
-  font-weight: 600;
-  margin-top: 1.2em;
-  margin-bottom: 0.5em;
-  color: var(--color-text);
-}
-
-.ProseMirror h3 {
-  font-size: 1.35rem; /* 22px */
-  line-height: 1.35;
-  font-weight: 600;
-  margin-top: 1em;
-  margin-bottom: 0.4em;
-  color: var(--color-text);
-}
-
-/* Paragraph */
-.ProseMirror p {
-  font-size: 1rem;
-  line-height: 1.75;
-  margin: 0.5em 0;
-  color: var(--color-text);
-}
-
-/* Placeholder */
-.ProseMirror p.is-editor-empty:first-child::before {
-  color: rgba(255, 255, 255, 0.35);
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-
-/* TipTap base */
 .ProseMirror {
   outline: none;
   min-height: 180px;
   color: var(--color-text);
 }
 
-/* placeholder tiptap */
-.ProseMirror p.is-editor-empty:first-child::before {
-  color: var(--color-muted);
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror p {
+  color: var(--color-text);
 }
 
-/* Preview HTML styling (tanpa tailwind typography) */
+/* ===============================
+   Preview Content
+   =============================== */
 .dc-content {
   color: var(--color-text);
   line-height: 1.7;
@@ -202,44 +100,28 @@ html.dark{
 .dc-content h1 {
   font-size: 40px;
   font-weight: 800;
-  line-height: 1.15;
   margin: 18px 0 10px;
-  color: var(--color-text);
 }
 
 .dc-content h2 {
   font-size: 30px;
   font-weight: 700;
-  line-height: 1.2;
   margin: 16px 0 8px;
-  color: var(--color-text);
 }
 
 .dc-content h3 {
   font-size: 22px;
   font-weight: 700;
-  line-height: 1.25;
   margin: 14px 0 6px;
-  color: var(--color-text);
 }
 
-.dc-content p {
-  margin: 10px 0;
-  color: var(--color-text);
-}
-
+.dc-content p { margin: 10px 0; }
 .dc-content ul,
-.dc-content ol {
-  margin: 10px 0 10px 22px;
-}
-
-.dc-content li {
-  margin: 6px 0;
-  color: var(--color-text);
-}
+.dc-content ol { margin: 10px 0 10px 22px; }
+.dc-content li { margin: 6px 0; }
 
 .dc-content strong {
-  color: var(--color-text);
+  color: inherit;
 }
 
 .dc-content a {
@@ -247,7 +129,9 @@ html.dark{
   text-decoration: underline;
 }
 
-/* Popup styles */
+/* ===============================
+   Popup & Layout
+   =============================== */
 .popup-surface{
   background:var(--bg-card);
   color:var(--color-text)
@@ -267,85 +151,8 @@ html.dark aside > div:first-child{
 }
 
 /* ===============================
-   COLOR THEME OVERRIDES FOR EDITOR
+   Body
    =============================== */
-
-/* CSS Override untuk warna teks di editor berdasarkan tema */
-/* Ini memastikan konten yang disimpan dengan warna tertentu tampil sesuai tema */
-
-/* Light Mode - Tampilkan warna Light Palette */
-html.light .ProseMirror [style*="color: #ABF4AB"],
-html.light .ProseMirror [style*="color:#ABF4AB"],
-html.light .ProseMirror [style*="color: #abf4ab"],
-html.light .ProseMirror [style*="color:#abf4ab"] {
-  color: #30A230 !important;
-}
-
-html.light .ProseMirror [style*="color: #DF9094"],
-html.light .ProseMirror [style*="color:#DF9094"],
-html.light .ProseMirror [style*="color: #df9094"],
-html.light .ProseMirror [style*="color:#df9094"] {
-  color: #B43A40 !important;
-}
-
-html.light .ProseMirror [style*="color: #F0DC88"],
-html.light .ProseMirror [style*="color:#F0DC88"],
-html.light .ProseMirror [style*="color: #f0dc88"],
-html.light .ProseMirror [style*="color:#f0dc88"] {
-  color: #E9BC00 !important;
-}
-
-html.light .ProseMirror [style*="color: #D5D5C9"],
-html.light .ProseMirror [style*="color:#D5D5C9"],
-html.light .ProseMirror [style*="color: #d5d5c9"],
-html.light .ProseMirror [style*="color:#d5d5c9"] {
-  color: #787878 !important;
-}
-
-html.light .ProseMirror [style*="color: #FFFFFF"],
-html.light .ProseMirror [style*="color:#FFFFFF"],
-html.light .ProseMirror [style*="color: #ffffff"],
-html.light .ProseMirror [style*="color:#ffffff"] {
-  color: #191919 !important;
-}
-
-/* Dark Mode - Tampilkan warna Dark Palette */
-html.dark .ProseMirror [style*="color: #30A230"],
-html.dark .ProseMirror [style*="color:#30A230"],
-html.dark .ProseMirror [style*="color: #30a230"],
-html.dark .ProseMirror [style*="color:#30a230"] {
-  color: #ABF4AB !important;
-}
-
-html.dark .ProseMirror [style*="color: #B43A40"],
-html.dark .ProseMirror [style*="color:#B43A40"],
-html.dark .ProseMirror [style*="color: #b43a40"],
-html.dark .ProseMirror [style*="color:#b43a40"] {
-  color: #DF9094 !important;
-}
-
-html.dark .ProseMirror [style*="color: #E9BC00"],
-html.dark .ProseMirror [style*="color:#E9BC00"],
-html.dark .ProseMirror [style*="color: #e9bc00"],
-html.dark .ProseMirror [style*="color:#e9bc00"] {
-  color: #F0DC88 !important;
-}
-
-html.dark .ProseMirror [style*="color: #787878"],
-html.dark .ProseMirror [style*="color:#787878"],
-html.dark .ProseMirror [style*="color: #787878"],
-html.dark .ProseMirror [style*="color:#787878"] {
-  color: #D5D5C9 !important;
-}
-
-html.dark .ProseMirror [style*="color: #191919"],
-html.dark .ProseMirror [style*="color:#191919"],
-html.dark .ProseMirror [style*="color: #191919"],
-html.dark .ProseMirror [style*="color:#191919"] {
-  color: #FFFFFF !important;
-}
-
-/* Ensure body takes the theme */
 body {
   background-color: var(--color-bg);
   color: var(--color-text);

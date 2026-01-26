@@ -144,9 +144,9 @@ export default function PageView() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+
   const timerRef = useRef<number | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
-  const styleElementRef = useRef<HTMLStyleElement | null>(null);
 
   const allowEdit = canEdit(role);
 
@@ -158,11 +158,6 @@ export default function PageView() {
   const iconPopupRef = useRef<HTMLDivElement>(null);
   const iconButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Theme detection
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [themeChangeCount, setThemeChangeCount] = useState(0);
-
-
   function flash(msg: string) {
     setSaveMsg(msg);
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -170,27 +165,24 @@ export default function PageView() {
   }
 
   // Auto-save function
-  const saveContent = useCallback(async () => {
+ const saveContent = useCallback(async () => {
     if (!page || !allowEdit || !dirty) return;
 
     setSaving(true);
-    console.log("Auto-saving...");
 
-    // Always save in dark mode format for consistency
-    const contentToSave = isDarkMode ? draftContent : convertColorsForTheme(draftContent, true);
+    const contentToSave = draftContent;
 
     const { error } = await supabase
       .from("pages")
-      .update({ 
+      .update({
         content_md: contentToSave,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("id", page.id);
 
     setSaving(false);
 
     if (error) {
-      console.error("Auto-save failed:", error.message);
       flash(`Auto-save gagal: ${error.message}`);
       return;
     }
@@ -198,8 +190,7 @@ export default function PageView() {
     setPage((prev) => (prev ? { ...prev, content_md: contentToSave } : prev));
     setDirty(false);
     setLastSaveTime(new Date());
-    console.log("Auto-save successful");
-  }, [page, allowEdit, dirty, draftContent, isDarkMode, supabase]);
+  }, [page, allowEdit, dirty, draftContent, supabase]);
 
   // Debounced auto-save
   const debouncedSave = useCallback(
@@ -230,106 +221,41 @@ export default function PageView() {
   }, [page, allowEdit, dirty, saveContent]);
 
   // Effect untuk menutup popup icon ketika klik di luar
-  useEffect(() => {
+   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (iconOpen && 
-          iconPopupRef.current && 
-          !iconPopupRef.current.contains(event.target as Node) &&
-          iconButtonRef.current &&
-          !iconButtonRef.current.contains(event.target as Node)) {
+      if (
+        iconOpen &&
+        iconPopupRef.current &&
+        !iconPopupRef.current.contains(event.target as Node) &&
+        iconButtonRef.current &&
+        !iconButtonRef.current.contains(event.target as Node)
+      ) {
         setIconOpen(false);
       }
     }
-    
     document.addEventListener("mousedown", handleClickOutside);
-    
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [iconOpen]);
 
-  // Deteksi tema dan apply CSS override
-  useEffect(() => {
-    const checkTheme = () => {
-      const isDark = document.documentElement.classList.contains('dark');
-      setIsDarkMode(isDark);
-      
-      // Apply CSS override
-      if (!styleElementRef.current) {
-        styleElementRef.current = document.createElement('style');
-        document.head.appendChild(styleElementRef.current);
-      }
-      
-      styleElementRef.current.innerHTML = getColorOverrideCSS(isDark);
-      
-      // Force re-render untuk preview mode
-      if (mode === 'preview') {
-        setThemeChangeCount(prev => prev + 1);
-      }
-    };
-
-    // Check initial theme
-    checkTheme();
-
-    // Observe theme changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          const wasDark = isDarkMode;
-          const isNowDark = document.documentElement.classList.contains('dark');
-          
-          if (wasDark !== isNowDark) {
-            checkTheme();
-          }
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, { attributes: true });
-
-    return () => {
-      observer.disconnect();
-      if (styleElementRef.current) {
-        document.head.removeChild(styleElementRef.current);
-        styleElementRef.current = null;
-      }
-    };
-  }, [isDarkMode, mode]);
-
-  // Setup auto-save
   useEffect(() => {
     return () => {
-      if (autoSaveTimerRef.current) {
-        window.clearTimeout(autoSaveTimerRef.current);
-      }
+      if (autoSaveTimerRef.current) window.clearTimeout(autoSaveTimerRef.current);
     };
   }, []);
 
-  // Trigger auto-save on content change
   useEffect(() => {
-    if (autoSaveEnabled && dirty) {
-      debouncedSave();
-    }
-    
-    return () => {
-      debouncedSave.cancel();
-    };
+    if (autoSaveEnabled && dirty) debouncedSave();
+    return () => debouncedSave.cancel();
   }, [draftContent, autoSaveEnabled, dirty, debouncedSave]);
 
-  // Auto-save interval (every 30 seconds if dirty)
   useEffect(() => {
     if (!autoSaveEnabled || !allowEdit) return;
-
     const interval = setInterval(() => {
-      if (dirty) {
-        saveContent();
-      }
-    }, 30000); // Save every 30 seconds if there are changes
-
+      if (dirty) saveContent();
+    }, 30000);
     return () => clearInterval(interval);
   }, [autoSaveEnabled, allowEdit, dirty, saveContent]);
 
-  // load role
   useEffect(() => {
     (async () => {
       const r = await getMyRoleBrowser();
@@ -337,18 +263,14 @@ export default function PageView() {
     })();
   }, []);
 
-  // force preview if not allowed
   useEffect(() => {
     if (!allowEdit) setMode("preview");
   }, [allowEdit]);
 
-  // load page
   useEffect(() => {
     let mounted = true;
-
     async function load() {
       setLoading(true);
-
       const { data, error } = await supabase
         .from("pages")
         .select("id,title,slug,type,icon,content_md,status,external_url")
@@ -358,7 +280,6 @@ export default function PageView() {
       if (!mounted) return;
 
       if (error) {
-        console.warn(error.message);
         setPage(null);
         setDraftContent("");
         setDirty(false);
@@ -367,8 +288,6 @@ export default function PageView() {
       }
 
       const p = (data ?? null) as PageRow | null;
-      
-      // Set draft content from database
       setDraftContent(p?.content_md || "");
       setPage(p);
       setDirty(false);
@@ -703,25 +622,19 @@ export default function PageView() {
 
       {/* Notes / Content */}
       <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 min-w-0">
-
         {allowEdit && mode === "edit" ? (
           <RichEditor
             value={draftContent}
-            editable={true}
+            editable
             uploadFolder={`pages/${page.id}`}
             onChangeHtml={handleContentChange}
             placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
           />
         ) : (
           <div
-            key={`preview-${themeChangeCount}`} // Force re-render on theme change
-            className="theme-color-override"
+            key={draftContent}
+            className="dc-content break-words overflow-wrap-anywhere"
             dangerouslySetInnerHTML={{ __html: draftContent }}
-            style={{
-              color: 'var(--color-text)',
-              lineHeight: '1.7',
-              fontSize: '16px',
-            }}
           />
         )}
       </div>
