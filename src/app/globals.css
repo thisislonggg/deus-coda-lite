@@ -81,12 +81,32 @@ html.dark{
   color: var(--color-text);
 }
 
-.ProseMirror h1,
-.ProseMirror h2,
-.ProseMirror h3,
-.ProseMirror p {
-  color: var(--color-text);
+/* ===============================
+   TipTap Editor Headings
+   =============================== */
+
+.ProseMirror h1 {
+  font-size: 40px;
+  font-weight: 800;
+  margin: 18px 0 10px;
 }
+
+.ProseMirror h2 {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.ProseMirror h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 14px 0 6px;
+}
+
+.ProseMirror p {
+  margin: 10px 0;
+}
+
 
 /* ===============================
    Preview Content
@@ -156,4 +176,6 @@ html.dark aside > div:first-child{
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+    height: 100%;
+  overflow: hidden;
 }

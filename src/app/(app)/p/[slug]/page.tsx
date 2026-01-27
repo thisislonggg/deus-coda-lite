@@ -22,6 +22,17 @@ type PageRow = {
   status?: string | null;
   external_url?: string | null;
 };
+function isContentEmpty(html?: string | null) {
+  if (!html) return true;
+
+  const cleaned = html
+    .replace(/<p><\/p>/gi, "")
+    .replace(/<br\s*\/?>/gi, "")
+    .replace(/&nbsp;/gi, "")
+    .trim();
+
+  return cleaned === "";
+}
 
 function toEmbeddableGoogleUrl(url: string) {
   if (url.includes("docs.google.com/spreadsheets")) return url.replace(/\/edit.*$/, "/preview");
@@ -329,10 +340,10 @@ export default function PageView() {
 
   // loading states
   if (loading) {
-    return <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6">Loading...</div>;
+    return <div className="h-full bg-[var(--color-bg)] text-[var(--color-text)] p-6">Loading...</div>;
   }
   if (!page) {
-    return <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6">Page tidak ditemukan.</div>;
+    return <div className="h-full bg-[var(--color-bg)] text-[var(--color-text)] p-6">Page tidak ditemukan.</div>;
   }
 
   const isFolder = page.type === "folder";
@@ -344,7 +355,7 @@ export default function PageView() {
   const presetIcons = [...(ICON_PRESETS[page.type] ?? []), ...ICON_PRESETS.general];
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] p-6 relative">
+    <div className="h-full bg-[var(--color-bg)] text-[var(--color-text)] p-6 relative">
 
       {/* ======================================================
           ✅ MOBILE HEADER (SEKARANG BENAR-BENAR MUNCUL)
@@ -621,23 +632,34 @@ export default function PageView() {
       )}
 
       {/* Notes / Content */}
-      <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 min-w-0">
-        {allowEdit && mode === "edit" ? (
-          <RichEditor
-            value={draftContent}
-            editable
-            uploadFolder={`pages/${page.id}`}
-            onChangeHtml={handleContentChange}
-            placeholder="Tulis catatan… (H1/H2/H3, list, dll)"
-          />
-        ) : (
-          <div
-            key={draftContent}
-            className="dc-content break-words overflow-wrap-anywhere"
-            dangerouslySetInnerHTML={{ __html: draftContent }}
-          />
-        )}
-      </div>
+
+{/* MODE EDIT → editor SELALU muncul */}
+{allowEdit && mode === "edit" && (
+  <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 min-w-0">
+    <RichEditor
+      value={draftContent}
+      editable
+      uploadFolder={`pages/${page.id}`}
+      onChangeHtml={handleContentChange}
+      placeholder={
+        isFolder
+          ? "Tulis catatan folder…"
+          : "Tulis catatan… (H1/H2/H3, list, dll)"
+      }
+    />
+  </div>
+)}
+
+{mode === "preview" && !isContentEmpty(draftContent) && (
+  <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-card)] p-6 min-w-0">
+    <div
+      key={draftContent}
+      className="dc-content break-words overflow-wrap-anywhere"
+      dangerouslySetInnerHTML={{ __html: draftContent }}
+    />
+  </div>
+)}
+
     </div>
   );
 }

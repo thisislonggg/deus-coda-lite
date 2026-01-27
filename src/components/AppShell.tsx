@@ -39,7 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+    <div className="h-screen overflow-hidden bg-[var(--color-bg)] text-[var(--color-text)]">
       {/* ================= MOBILE TOP BAR ================= */}
       <div className="md:hidden sticky top-0 z-50 border-b border-[var(--border-main)] bg-[var(--color-bg)]">
         <div className="h-14 px-4 flex items-center justify-between">
@@ -69,16 +69,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ================= MAIN LAYOUT ================= */}
-      <div className="flex">
+      <div className="relative h-full">
         {/* DESKTOP SIDEBAR */}
         {isDesktopOpen && (
-          <aside className="hidden md:block w-[320px] h-screen border-r border-[var(--border-main)]">
+            <aside className="hidden md:block fixed left-0 top-0 w-[320px] h-screen border-r border-[var(--border-main)] z-40">
             <SidebarTree />
           </aside>
         )}
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 min-w-0 relative">
+        <main
+  className={[
+    "h-screen overflow-y-auto min-w-0 relative transition-[margin] duration-300 ease-in-out",
+    isDesktopOpen ? "ml-[320px]" : "ml-0",
+  ].join(" ")}
+>
           {/* DESKTOP CONTENT HEADER */}
           <div className="hidden md:flex items-center gap-3 sticky top-0 z-30 border-b border-[var(--border-main)] bg-[var(--color-bg)] px-4 py-3">
             <button

@@ -589,13 +589,15 @@ export default function SidebarTree({ showDrafts = true }: { showDrafts?: boolea
 const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
-    <aside className="shrink-0 w-[320px] overflow-hidden border-r h-screen"
-      style={{
-        borderColor: 'var(--sidebar-border)',
-        background: 'var(--sidebar-bg)',
-        zIndex: 10,
-        top: 0,
-      }}>
+<aside
+  className="fixed left-0 top-0 h-screen w-[320px] overflow-hidden border-r"
+  style={{
+    borderColor: "var(--sidebar-border)",
+    background: "var(--sidebar-bg)",
+    zIndex: 50,
+  }}
+>
+
         <div className="sticky top-0 z-20 p-4  bg-[var(--sidebar-bg)]">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0 flex items-center gap-3">
