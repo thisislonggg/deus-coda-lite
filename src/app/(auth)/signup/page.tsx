@@ -30,7 +30,7 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    // 1) Sign up + simpan metadata (ini yang paling pasti tersimpan)
+    // 1) Sign up
     const { data, error } = await supabase.auth.signUp({
       email: mail,
       password,
@@ -48,10 +48,6 @@ export default function SignupPage() {
 
     const userId = data.user?.id;
 
-    // 2) Coba upsert ke profiles (lebih aman daripada insert)
-    // NOTE: Jika email confirmation aktif dan session belum ada,
-    // RLS bisa menolak upsert karena auth.uid() belum tersedia.
-    // Kita tidak hard-fail, cukup warning.
     if (userId) {
       const { error: profileErr } = await supabase.from("profiles").upsert(
         {
@@ -66,13 +62,13 @@ export default function SignupPage() {
         console.warn("Upsert profiles failed:", profileErr.message);
         // tetap lanjut sukses signup, tapi kasih info supaya kamu tau penyebabnya
         setMsg(
-          "Signup berhasil. Nama tersimpan di akun, tapi belum masuk ke tabel profiles (biasanya karena email confirmation/RLS). Setelah login, nama tetap akan muncul dari metadata."
+          "Signup berhasil."
         );
       } else {
-        setMsg("Signup berhasil. Cek email untuk verifikasi (kalau email confirmation aktif).");
+        setMsg("Signup berhasil. Cek email untuk verifikasi.");
       }
     } else {
-      setMsg("Signup berhasil. Cek email untuk verifikasi (kalau email confirmation aktif).");
+      setMsg("Signup berhasil. Cek email untuk verifikasi.");
     }
 
     setLoading(false);
